@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Home</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+  <!-- ========== NAVBAR ========== -->
+  <nav class="bg-white shadow sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <span class="text-xl font-bold text-indigo-600">Dashboard</span>
+        <div class="space-x-2 sm:space-x-4 text-sm font-medium">
+          <a href="/"          class="text-indigo-600">Home</a>
+          <a href="lectures.html"  class="hover:text-indigo-600 transition">Lectures</a>
+          <a href="students.html"  class="hover:text-indigo-600 transition">Students</a>
+          <a href="announcements.html" class="hover:text-indigo-600 transition">Announcements</a>
+          <a href="banners.html" class="hover:text-indigo-600 transition">Banners</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== HERO SECTION ========== -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold text-slate-900 mb-4">Welcome to Dashboard</h1>
+      <p class="text-xl text-slate-600 max-w-2xl mx-auto">
+        Manage your educational content, students, and communications from one central location
+      </p>
+    </div>
+
+    <!-- ========== DASHBOARD CARDS ========== -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      
+      <!-- Lectures Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-white text-xl font-semibold">Lectures</h3>
+              <p class="text-blue-100 text-sm">Manage lecture schedules</p>
+            </div>
+            <div class="text-white text-3xl">📚</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-slate-600 mb-4">Create, edit, and organize lecture schedules, assign faculty, and manage course details.</p>
+          <a href="lectures.html" class="inline-flex items-center justify-center w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+            Manage Lectures
+          </a>
+        </div>
+      </div>
+
+      <!-- Students Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+        <div class="bg-gradient-to-r from-green-500 to-green-600 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-white text-xl font-semibold">Students</h3>
+              <p class="text-green-100 text-sm">Manage student records</p>
+            </div>
+            <div class="text-white text-3xl">👨‍🎓</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-slate-600 mb-4">Handle student enrollment, track academic progress, and manage student information.</p>
+          <a href="students.html" class="inline-flex items-center justify-center w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
+            Manage Students
+          </a>
+        </div>
+      </div>
+
+      <!-- Announcements Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-white text-xl font-semibold">Announcements</h3>
+              <p class="text-purple-100 text-sm">Broadcast important news</p>
+            </div>
+            <div class="text-white text-3xl">📢</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-slate-600 mb-4">Create and distribute announcements, set priorities, and manage communication.</p>
+          <a href="announcements.html" class="inline-flex items-center justify-center w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition">
+            Manage Announcements
+          </a>
+        </div>
+      </div>
+
+      <!-- Banners Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+        <div class="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-white text-xl font-semibold">Banners</h3>
+              <p class="text-orange-100 text-sm">Manage visual content</p>
+            </div>
+            <div class="text-white text-3xl">🎨</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-slate-600 mb-4">Upload and organize promotional banners, set display order, and manage visibility.</p>
+          <a href="banners.html" class="inline-flex items-center justify-center w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition">
+            Manage Banners
+          </a>
+        </div>
+      </div>
+
+      <!-- Notification System Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-white text-xl font-semibold">Notifications</h3>
+              <p class="text-indigo-100 text-sm">Real-time notifications</p>
+            </div>
+            <div class="text-white text-3xl">🔔</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-slate-600 mb-4">Access the notification system to send instant alerts and updates to users.</p>
+          <a href="https://notify-eight-theta.vercel.app/" target="_blank" class="inline-flex items-center justify-center w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
+            Open Notification System
+            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Stats Card -->
+      <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+        <div class="bg-gradient-to-r from-slate-500 to-slate-600 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-white text-xl font-semibold">Quick Stats</h3>
+              <p class="text-slate-100 text-sm">System overview</p>
+            </div>
+            <div class="text-white text-3xl">📊</div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="text-center">
+              <div id="lecturesCount" class="text-2xl font-bold text-blue-600">...</div>
+              <div class="text-xs text-slate-500">Total Lectures</div>
+            </div>
+            <div class="text-center">
+              <div id="studentsCount" class="text-2xl font-bold text-green-600">...</div>
+              <div class="text-xs text-slate-500">Total Students</div>
+            </div>
+            <div class="text-center">
+              <div id="announcementsCount" class="text-2xl font-bold text-purple-600">...</div>
+              <div class="text-xs text-slate-500">Announcements</div>
+            </div>
+            <div class="text-center">
+              <div id="bannersCount" class="text-2xl font-bold text-orange-600">...</div>
+              <div class="text-xs text-slate-500">Active Banners</div>
+            </div>
+          </div>
+          <div class="text-center text-slate-600 text-sm" id="systemStatus">
+            Loading system data...
+          </div>
+        </div>
+      </div>
+    </div>
+
+   
+  </main>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="bg-white border-t mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="text-center text-slate-600">
+        <p>&copy; 2024 Dashboard System. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========== JAVASCRIPT ========== -->
+  <script>
+    // Load dashboard statistics from database
+    async function loadDashboardStats() {
+      try {
+        // Fetch data from all endpoints
+        const [lectures, students, announcements, banners] = await Promise.all([
+          fetch('/api/lectures').then(r => r.json()).catch(() => []),
+          fetch('/api/students').then(r => r.json()).catch(() => []),
+          fetch('/api/announcements').then(r => r.json()).catch(() => []),
+          fetch('/api/banners').then(r => r.json()).catch(() => [])
+        ]);
+
+        // Update the UI with real counts
+        document.getElementById('lecturesCount').textContent = lectures.length;
+        document.getElementById('studentsCount').textContent = students.length;
+        document.getElementById('announcementsCount').textContent = announcements.length;
+        
+        // Count only active banners
+        const activeBanners = banners.filter(banner => 
+          banner.isActive === 'TRUE' || banner.isActive === true
+        );
+        document.getElementById('bannersCount').textContent = activeBanners.length;
+
+        // Update system status
+        const totalItems = lectures.length + students.length + announcements.length + banners.length;
+        const statusElement = document.getElementById('systemStatus');
+        
+        if (totalItems > 0) {
+          statusElement.textContent = 'System running smoothly';
+          statusElement.className = 'text-center text-green-600 text-sm font-medium';
+        } else {
+          statusElement.textContent = 'No data found - Add some content to get started';
+          statusElement.className = 'text-center text-amber-600 text-sm font-medium';
+        }
+
+      } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+        
+        // Fallback to placeholder values if API is not available
+        document.getElementById('lecturesCount').textContent = '—';
+        document.getElementById('studentsCount').textContent = '—';
+        document.getElementById('announcementsCount').textContent = '—';
+        document.getElementById('bannersCount').textContent = '—';
+        
+        document.getElementById('systemStatus').textContent = 'Unable to connect to database';
+        document.getElementById('systemStatus').className = 'text-center text-red-600 text-sm font-medium';
+      }
+    }
+
+    // Load stats when page loads
+    document.addEventListener('DOMContentLoaded', loadDashboardStats);
+
+    // Refresh stats every 30 seconds
+    setInterval(loadDashboardStats, 30000);
+  </script>
+</body>
+</html>

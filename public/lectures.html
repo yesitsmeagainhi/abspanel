@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lectures CRUD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+    <nav class="bg-white shadow sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <span class="text-xl font-bold text-indigo-600">Dashboard</span>
+                <div class="space-x-2 sm:space-x-4 text-sm font-medium">
+                    <a href="/"            class="hover:text-indigo-600 transition">Home</a>
+                    <a href="lectures.html"  class="text-indigo-600">Lectures</a>
+                    <a href="students.html"  class="hover:text-indigo-600 transition">Students</a>
+                    <a href="announcements.html" class="hover:text-indigo-600 transition">Announcements</a>
+                    <a href="banners.html" class="hover:text-indigo-600 transition">Banners</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <section id="formSection" class="bg-white rounded-xl shadow p-6 mb-8">
+            <h2 id="formTitle" class="text-xl font-semibold mb-4">Add Lecture</h2>
+            <form id="form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <select name="course" id="courseSelect" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">Select Course</option>
+                    <option value="D.Pharm">D.Pharm</option>
+                    <option value="B.Pharm">B.Pharm</option>
+                    <option value="GNM">GNM</option>
+                </select>
+                
+                <select name="batch" id="batchSelect" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none" disabled>
+                    <option value="">Select Batch</option>
+                </select>
+                
+                <select name="branch" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">Select Branch</option>
+                    <option value="Nalasopara">Nalasopara</option>
+                    <option value="Bhayandar">Bhayandar</option>
+                    <option value="Malad">Malad</option>
+                    <option value="Thane">Thane</option>
+                    <option value="Andheri">Andheri</option>
+                    <option value="Kurla">Kurla</option>
+                </select>
+                
+                <select name="year" id="yearSelect" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none" disabled>
+                    <option value="">Select Year/Semester</option>
+                </select>
+                
+                <select name="subject" id="subjectSelect" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none" disabled>
+                    <option value="">Select Subject</option>
+                </select>
+                
+                <select name="faculty" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">Select Faculty</option>
+                    <option value="Srishti Rajesh Pohuja mam">Srishti Rajesh Pohuja mam</option>
+                    <option value="Rubina Khan mam">Rubina Khan mam</option>
+                    <option value="Abhishekh Prajapati Sir">Abhishekh Prajapati Sir</option>
+                    <option value="Ankit Khedekar Sir">Ankit Khedekar Sir</option>
+                    <option value="Akashdeep Udmale Sir">Akashdeep Udmale Sir</option>
+                    <option value="Kuldeep Prajapati sir">Kuldeep Prajapati sir</option>
+                    <option value="Priya Vijay Gholap mam">Priya Vijay Gholap mam</option>
+                    <option value="Amit Agrawal sir">Amit Agrawal sir</option>
+                    <option value="Rashmi Ghuge mam">Rashmi Ghuge mam</option>
+                    <option value="Deepika Gill mam">Deepika Gill mam</option>
+                    <option value="Shalaka Regan Fernandes mam">Shalaka Regan Fernandes mam</option>
+                    <option value="Dr. Ruhi Solkar mam">Dr. Ruhi Solkar mam</option>
+                    <option value="Jitesh Choudhary sir">Jitesh Choudhary sir</option>
+                    <option value="Rachana Chauhan mam">Rachana Chauhan mam</option>
+                    <option value="Pooja Ghuge mam">Pooja Ghuge mam</option>
+                    <option value="Shraddha Agrawal mam">Shraddha Agrawal mam</option>
+                    <option value="Rajesh sir">Rajesh sir</option>
+                    <option value="Ravish Sir">Ravish Sir</option>
+                    <option value="ajay">ajay</option>
+                    <option value="Naresh Basude">Naresh Basude</option>
+                    <option value="Zara Mam">Zara Mam</option>
+                    <option value="Suryansh Sir">Suryansh Sir</option>
+                    <option value="Sneha durge mam">Sneha durge mam</option>
+                    <option value="Dr Utpala mam">Dr Utpala mam</option>
+                </select>
+                
+                <input  name="date"      type="date"              required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                <input  name="start"     type="time"              required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                <input  name="end"       type="time"              required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                
+                <select name="mode" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">Select Mode</option>
+                    <option value="Online">Online</option>
+                    <option value="Offline">Offline</option>
+                </select>
+                
+                <input  name="link"      placeholder="Link (opt)"          class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                <input  name="location"  placeholder="Location (opt)"    class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+                <div class="sm:col-span-2 lg:col-span-3 flex gap-2">
+                    <button type="submit" id="submitBtn"
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition">
+                        Save
+                    </button>
+                    <button type="button" id="cancelBtn"
+                            class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section class="bg-white rounded-xl shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Filter Lectures</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <select id="dateFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="all">All Dates</option>
+                    <option value="today">Today's Lectures</option>
+                    <option value="previous">Previous Lectures</option>
+                    <option value="upcoming">Upcoming Lectures</option>
+                </select>
+                <select id="courseFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="all">All Courses</option>
+                </select>
+                <select id="facultyFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="all">All Faculty</option>
+                </select>
+                <select id="modeFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="all">All Modes</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                </select>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Today's Lectures
+                </span>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                    <div class="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
+                    Upcoming Lectures
+                </span>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    <div class="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                    Previous Lectures
+                </span>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow overflow-x-auto">
+            <table id="list" class="w-full text-sm text-left">
+                <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3">Course</th><th class="px-4 py-3">Batch</th><th class="px-4 py-3">Branch</th>
+                        <th class="px-4 py-3">Year</th><th class="px-4 py-3">Subject</th><th class="px-4 py-3">Faculty</th>
+                        <th class="px-4 py-3">Date</th><th class="px-4 py-3">Start</th><th class="px-4 py-3">End</th>
+                        <th class="px-4 py-3">Mode</th><th class="px-4 py-3">Link</th><th class="px-4 py-3">Location</th>
+                        <th class="px-4 py-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100" id="listBody">
+                    </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        const form          = document.getElementById('form');
+        const list          = document.getElementById('list');
+        const formTitle     = document.getElementById('formTitle');
+        const submitBtn     = document.getElementById('submitBtn');
+        const cancelBtn     = document.getElementById('cancelBtn');
+        
+        // Filter elements
+        const dateFilter = document.getElementById('dateFilter');
+        const courseFilter = document.getElementById('courseFilter');
+        const facultyFilter = document.getElementById('facultyFilter');
+        const modeFilter = document.getElementById('modeFilter');
+        
+        // Form dropdown elements
+        const courseSelect = document.getElementById('courseSelect');
+        const batchSelect = document.getElementById('batchSelect');
+        const yearSelect = document.getElementById('yearSelect');
+        const subjectSelect = document.getElementById('subjectSelect');
+        
+        let editId = null;
+        let allLectures = [];
+
+        // Dropdown data structure - Updated with correct data
+        const dropdownData = {
+            batches: {
+                'D.Pharm': ['D- Batch D.Pharm', 'E- Batch D.Pharm', 'F- Batch D.Pharm'],
+                'B.Pharm': ['24-25 B.Pharm', '25-26 B.Pharm'],
+                'GNM': ['E- Batch Gnm', 'F- Batch Gnm']
+            },
+            years: {
+                'D.Pharm': ['1st Year', '2nd Year'],
+                'B.Pharm': ['sem 1', 'sem 2', 'sem 3', 'sem 4', 'sem 5', 'sem 6', 'sem 7', 'sem 8'],
+                'GNM': ['1st Year', '2nd Year', '3rd Year']
+            },
+            subjects: {
+                'D.Pharm': {
+                    '1st Year': ['Pharmaceutics', 'Pharmaceutical Chemistry', 'Pharmacognosy', 'Human Anatomy & Physiology', 'Social Pharmacy'],
+                    '2nd Year': ['Pharmacology', 'Pharmacotherapeutics', 'Biochemistry & Clinical Pathology', 'Community Pharmacy & Management', 'Hospital & Clinical Pharmacy', 'Pharmacy Law & Ethics']
+                },
+                'B.Pharm': {
+                    'sem 1': ['Human Anatomy and Physiology I (BP101T)', 'Pharmaceutical Analysis I (BP102T)', 'Pharmaceutics I (BP103T)', 'Pharmaceutical Inorganic Chemistry (BP104T)', 'Communication Skills* (BP105T)', 'Remedial Biology* / Remedial Mathematics* (BP106RBT / BP106RMT)'],
+                    'sem 2': ['Human Anatomy and Physiology II (BP201T)', 'Pharmaceutical Organic Chemistry I (BP202T)', 'Biochemistry (BP203T)', 'Pathophysiology (BP204T)', 'Computer Applications in Pharmacy* (BP205T)', 'Environmental Sciences* (BP206T)'],
+                    'sem 3': ['Pharmaceutical Organic Chemistry II (BP301T)', 'Physical Pharmaceutics I (BP302T)', 'Pharmaceutical Microbiology (BP303T)', 'Pharmaceutical Engineering (BP304T)'],
+                    'sem 4': ['Pharmaceutical Organic Chemistry III (BP401T)', 'Medicinal Chemistry I (BP402T)', 'Physical Pharmaceutics II (BP403T)', 'Pharmacology I (BP404T)', 'Pharmacognosy and Phytochemistry I (BP405T)'],
+                    'sem 5': ['Medicinal Chemistry II (BP501T)', 'Industrial Pharmacy I (BP502T)', 'Pharmacology II (BP503T)', 'Pharmacognosy and Phytochemistry II (BP504T)', 'Pharmaceutical Jurisprudence (BP505T)'],
+                    'sem 6': ['Medicinal Chemistry III (BP601T)', 'Pharmacology III (BP602T)', 'Herbal Drug Technology (BP603T)', 'Biopharmaceutics and Pharmacokinetics (BP604T)', 'Pharmaceutical Biotechnology (BP605T)', 'Quality Assurance (BP606T)'],
+                    'sem 7': ['Instrumental Methods of Analysis (BP701T)', 'Industrial Pharmacy II (BP702T)', 'Pharmacy Practice (BP703T)', 'Novel Drug Delivery System (BP704T)'],
+                    'sem 8': ['Biostatistics and Research Methodology (BP801T)', 'Social and Preventive Pharmacy (BP802T)', 'Pharma Marketing Management (BP803ET)', 'Pharmaceutical Regulatory Science (BP804ET)', 'Pharmacovigilance (BP805ET)']
+                },
+                'GNM': {
+                    '1st Year': ['Bio- Science', 'Behavioural Science', 'Foundation of nursing', 'Community Health Nurssing'],
+                    '2nd Year': ['Bio- Science', 'Behavioural Science', 'Foundation of nursing', 'Community Health Nurssing'],
+                    '3rd Year': ['Bio- Science', 'Behavioural Science', 'Foundation of nursing', 'Community Health Nurssing']
+                }
+            }
+        };
+
+        // Dropdown cascade functions
+        function populateDropdown(selectElement, options, placeholder = 'Select Option') {
+            selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+            options.forEach(option => {
+                selectElement.innerHTML += `<option value="${option}">${option}</option>`;
+            });
+            selectElement.disabled = false; // Make sure to enable the dropdown
+        }
+
+        function resetDropdown(selectElement, placeholder = 'Select Option') {
+            selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+            selectElement.disabled = true;
+        }
+
+        function handleCourseChange() {
+            const selectedCourse = courseSelect.value;
+            console.log('Course selected:', selectedCourse);
+            
+            if (selectedCourse) {
+                // Enable and populate batch dropdown
+                const batches = dropdownData.batches[selectedCourse];
+                if (batches) {
+                    populateDropdown(batchSelect, batches, 'Select Batch');
+                    console.log('Batches populated:', batches);
+                } else {
+                    resetDropdown(batchSelect, 'Select Batch'); // No batches for this course
+                }
+                
+                // Enable and populate year dropdown
+                const years = dropdownData.years[selectedCourse];
+                if (years) {
+                    populateDropdown(yearSelect, years, 'Select Year/Semester');
+                    console.log('Years populated:', years);
+                } else {
+                    resetDropdown(yearSelect, 'Select Year/Semester'); // No years for this course
+                }
+                
+                // Reset subject dropdown - it needs both course AND year selection
+                resetDropdown(subjectSelect, 'Select Subject');
+                console.log('Subject dropdown reset - waiting for year selection');
+            } else {
+                // Reset all dependent dropdowns
+                resetDropdown(batchSelect, 'Select Batch');
+                resetDropdown(yearSelect, 'Select Year/Semester');
+                resetDropdown(subjectSelect, 'Select Subject');
+                console.log('All dropdowns reset');
+            }
+        }
+
+        function handleYearChange() {
+            const selectedCourse = courseSelect.value;
+            const selectedYear = yearSelect.value;
+            console.log('Year selected:', selectedYear, 'for course:', selectedCourse); // Debug log
+            
+            if (selectedCourse && selectedYear) {
+                // Enable and populate subject dropdown
+                const subjects = dropdownData.subjects[selectedCourse] && dropdownData.subjects[selectedCourse][selectedYear];
+                if (subjects) {
+                    populateDropdown(subjectSelect, subjects, 'Select Subject');
+                    console.log('Subjects populated:', subjects); // Debug log
+                } else {
+                    resetDropdown(subjectSelect, 'Select Subject');
+                    console.log('No subjects found for', selectedCourse, selectedYear); // Debug log
+                }
+            } else {
+                resetDropdown(subjectSelect, 'Select Subject');
+            }
+        }
+
+        // Add event listeners for dropdown cascading
+        courseSelect.addEventListener('change', handleCourseChange);
+        yearSelect.addEventListener('change', handleYearChange);
+
+        // Helper functions for date comparison
+        function getToday() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function getLectureRowClass(lectureDate) {
+            const today = getToday();
+            if (lectureDate === today) {
+                return 'bg-green-50 border-l-4 border-green-500'; // Today's lectures
+            } else if (lectureDate < today) {
+                return 'bg-gray-50 border-l-4 border-gray-400'; // Previous lectures
+            } else {
+                return 'bg-orange-50 border-l-4 border-orange-500'; // Upcoming lectures
+            }
+        }
+
+        function sortLecturesByDate(lectures) {
+            const today = getToday();
+            return lectures.sort((a, b) => {
+                // Today's lectures first
+                if (a.date === today && b.date !== today) return -1;
+                if (b.date === today && a.date !== today) return 1;
+                
+                // Then upcoming lectures (sorted by date ascending)
+                if (a.date > today && b.date > today) {
+                    return new Date(a.date) - new Date(b.date);
+                }
+                
+                // Then previous lectures (sorted by date descending)
+                if (a.date < today && b.date < today) {
+                    return new Date(b.date) - new Date(a.date);
+                }
+                
+                // Upcoming before previous
+                if (a.date > today && b.date < today) return -1;
+                if (b.date > today && a.date < today) return 1;
+                
+                return 0;
+            });
+        }
+
+        function populateFilterOptions(lectures) {
+            // Populate course filter
+            const courses = [...new Set(lectures.map(l => l.course))].sort();
+            courseFilter.innerHTML = '<option value="all">All Courses</option>' + 
+                courses.map(course => `<option value="${course}">${course}</option>`).join('');
+            
+            // Populate faculty filter
+            const faculties = [...new Set(lectures.map(l => l.faculty))].sort();
+            facultyFilter.innerHTML = '<option value="all">All Faculty</option>' + 
+                faculties.map(faculty => `<option value="${faculty}">${faculty}</option>`).join('');
+        }
+
+        function filterLectures() {
+            const dateFilterValue = dateFilter.value;
+            const courseFilterValue = courseFilter.value;
+            const facultyFilterValue = facultyFilter.value;
+            const modeFilterValue = modeFilter.value;
+            const today = getToday();
+
+            let filteredLectures = allLectures.filter(lecture => {
+                // Date filter
+                if (dateFilterValue === 'today' && lecture.date !== today) return false;
+                if (dateFilterValue === 'previous' && lecture.date >= today) return false;
+                if (dateFilterValue === 'upcoming' && lecture.date <= today) return false;
+                
+                // Course filter
+                if (courseFilterValue !== 'all' && lecture.course !== courseFilterValue) return false;
+                
+                // Faculty filter
+                if (facultyFilterValue !== 'all' && lecture.faculty !== facultyFilterValue) return false;
+                
+                // Mode filter
+                if (modeFilterValue !== 'all' && (lecture.mode || '').toLowerCase() !== modeFilterValue) return false;
+                
+                return true;
+            });
+
+            displayLectures(filteredLectures);
+        }
+
+        function displayLectures(lectures) {
+            const sortedLectures = sortLecturesByDate(lectures);
+            const tbody = document.getElementById('listBody');
+            
+            tbody.innerHTML = sortedLectures.length
+                ? sortedLectures.map(l => `
+                    <tr class="hover:bg-slate-50 ${getLectureRowClass(l.date)}">
+                        <td class="px-4 py-3">${l.course}</td>
+                        <td class="px-4 py-3">${l.batch}</td>
+                        <td class="px-4 py-3">${l.branch}</td>
+                        <td class="px-4 py-3">${l.year}</td>
+                        <td class="px-4 py-3">${l.subject}</td>
+                        <td class="px-4 py-3">${l.faculty}</td>
+                        <td class="px-4 py-3">
+                            <span class="font-medium">${l.date}</span>
+                            ${l.date === getToday() ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Today</span>' : ''}
+                        </td>
+                        <td class="px-4 py-3">${l.start}</td>
+                        <td class="px-4 py-3">${l.end}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${(l.mode || '').toLowerCase() === 'online' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}">
+                                ${l.mode || 'N/A'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">${l.link ? `<a href="${l.link}" target="_blank" class="text-indigo-600 hover:text-indigo-800">🔗</a>` : ''}</td>
+                        <td class="px-4 py-3">${l.location || ''}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex space-x-2">
+                                <button onclick="editLecture('${l.id}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">Edit</button>
+                                <button onclick="deleteLecture('${l.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">Delete</button>
+                            </div>
+                        </td>
+                    </tr>`).join('')
+                : `<tr><td colspan="13" class="text-center py-8 text-slate-500">No lectures found. ${dateFilter.value !== 'all' ? 'Try changing the filter or ' : ''}Add one above!</td></tr>`;
+        }
+
+        function resetForm() {
+            form.reset(); 
+            editId = null;
+            formTitle.textContent = 'Add Lecture';
+            submitBtn.textContent = 'Save';
+            
+            // Reset all dropdowns to initial state
+            resetDropdown(batchSelect, 'Select Batch');
+            resetDropdown(yearSelect, 'Select Year/Semester');
+            resetDropdown(subjectSelect, 'Select Subject');
+        }
+
+        cancelBtn.addEventListener('click', resetForm);
+
+        // This function was duplicated, consolidating and making it more robust
+        async function loadLecturesAndDisplay() {
+            // Get today's date for demonstration
+            const today = getToday();
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Initialize with updated sample data
+            const sampleLectures = [
+                {
+                    id: '1',
+                    course: 'D.Pharm',
+                    batch: 'D- Batch D.Pharm',
+                    branch: 'Nalasopara',
+                    year: '1st Year',
+                    subject: 'Pharmaceutics',
+                    faculty: 'Srishti Rajesh Pohuja mam',
+                    date: today,
+                    start: '10:00',
+                    end: '12:00',
+                    mode: 'Online',
+                    link: 'https://meet.google.com/abc-123',
+                    location: ''
+                },
+                {
+                    id: '2',
+                    course: 'B.Pharm',
+                    batch: '24-25 B.Pharm',
+                    branch: 'Bhayandar',
+                    year: 'sem 2',
+                    subject: 'Pharmaceutical Organic Chemistry I (BP202T)',
+                    faculty: 'Rubina Khan mam',
+                    date: yesterday.toISOString().split('T')[0],
+                    start: '14:00',
+                    end: '16:00',
+                    mode: 'Offline',
+                    link: '',
+                    location: 'Room 101'
+                },
+                {
+                    id: '3',
+                    course: 'GNM',
+                    batch: 'E- Batch Gnm',
+                    branch: 'Malad',
+                    year: '2nd Year',
+                    subject: 'Foundation of nursing',
+                    faculty: 'Abhishekh Prajapati Sir',
+                    date: tomorrow.toISOString().split('T')[0],
+                    start: '09:00',
+                    end: '11:00',
+                    mode: 'Online',
+                    link: 'https://meet.google.com/xyz-789',
+                    location: ''
+                },
+                {
+                    id: '4',
+                    course: 'B.Pharm',
+                    batch: '25-26 B.Pharm',
+                    branch: 'Thane',
+                    year: 'sem 5',
+                    subject: 'Medicinal Chemistry II (BP501T)',
+                    faculty: 'Ankit Khedekar Sir',
+                    date: '2024-12-25',
+                    start: '11:00',
+                    end: '13:00',
+                    mode: 'Offline',
+                    link: '',
+                    location: 'Room 205'
+                }
+            ];
+
+            // Try to fetch from API first
+            try {
+                const response = await fetch('/api/lectures');
+                if (response.ok) {
+                    const data = await response.json();
+                    allLectures = data && data.length > 0 ? data : sampleLectures;
+                } else {
+                    throw new Error('API not available');
+                }
+            } catch (error) {
+                console.log('API not available, using fallback data');
+                // Fallback to local storage if API is not available
+                const stored = localStorage.getItem('lectures');
+                if (stored) {
+                    try {
+                        allLectures = JSON.parse(stored);
+                    } catch (e) {
+                        allLectures = sampleLectures;
+                    }
+                } else {
+                    allLectures = sampleLectures;
+                }
+            }
+            
+            console.log('Loaded lectures:', allLectures);
+            populateFilterOptions(allLectures);
+            displayLectures(allLectures);
+        }
+
+        window.editLecture = async function(id) { // Made global for onclick
+            let lecture;
+            try {
+                lecture = await fetch(`/api/lectures/${id}`).then(r => r.json());
+            } catch (error) {
+                // Fallback to local data
+                lecture = allLectures.find(l => l.id === id);
+            }
+            
+            if (lecture) {
+                // Set course first to trigger cascading
+                courseSelect.value = lecture.course || '';
+                handleCourseChange(); // This populates batch and year
+
+                // Use a short delay to ensure batch and year dropdowns are populated
+                setTimeout(() => {
+                    batchSelect.value = lecture.batch || '';
+                    yearSelect.value = lecture.year || '';
+                    
+                    handleYearChange(); // This populates subject
+
+                    // Use another short delay to ensure subject dropdown is populated
+                    setTimeout(() => {
+                        subjectSelect.value = lecture.subject || '';
+                        
+                        // Set all other form fields
+                        Object.keys(lecture).forEach(k => {
+                            if (form[k] && !['course', 'batch', 'year', 'subject'].includes(k)) {
+                                form[k].value = lecture[k];
+                            }
+                        });
+                    }, 50); // Small delay for subject
+                }, 50); // Small delay for batch and year
+                
+                editId = id;
+                formTitle.textContent = 'Edit Lecture';
+                submitBtn.textContent = 'Update';
+                document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        window.deleteLecture = async function(id) { // Made global for onclick
+            if (!confirm('Delete lecture?')) return;
+            
+            try {
+                await fetch(`/api/lectures/${id}`, { method: 'DELETE' });
+            } catch (error) {
+                // Fallback to local storage
+                allLectures = allLectures.filter(l => l.id !== id);
+                localStorage.setItem('lectures', JSON.stringify(allLectures));
+            }
+            
+            loadLecturesAndDisplay();
+        }
+
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(form));
+            
+            try {
+                const method = editId ? 'PUT' : 'POST';
+                const url = editId ? `/api/lectures/${editId}` : '/api/lectures';
+                await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            } catch (error) {
+                // Fallback to local storage
+                if (editId) {
+                    const index = allLectures.findIndex(l => l.id === editId);
+                    if (index !== -1) {
+                        allLectures[index] = { ...data, id: editId };
+                    }
+                } else {
+                    const newLecture = { ...data, id: Date.now().toString() };
+                    allLectures.push(newLecture);
+                }
+                localStorage.setItem('lectures', JSON.stringify(allLectures));
+            }
+            
+            resetForm(); 
+            loadLecturesAndDisplay();
+        });
+
+        // Add event listeners for filters
+        dateFilter.addEventListener('change', filterLectures);
+        courseFilter.addEventListener('change', filterLectures);
+        facultyFilter.addEventListener('change', filterLectures);
+        modeFilter.addEventListener('change', filterLectures);
+
+        // Initialize page
+        loadLecturesAndDisplay();
+        
+        // Test dropdown functionality on page load
+        console.log('Page loaded, testing dropdowns...');
+        console.log('Course dropdown:', courseSelect);
+        console.log('Batch dropdown disabled:', batchSelect.disabled);
+        console.log('Year dropdown disabled:', yearSelect.disabled);
+        console.log('Subject dropdown disabled:', subjectSelect.disabled);
+    </script>
+</body>
+</html>

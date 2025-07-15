@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Banners CRUD</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+  <!-- ========== NAVBAR ========== -->
+  <nav class="bg-white shadow sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <span class="text-xl font-bold text-indigo-600">Dashboard</span>
+        <div class="space-x-2 sm:space-x-4 text-sm font-medium">
+          <a href="/"          class="hover:text-indigo-600 transition">Home</a>
+          <a href="lectures.html"  class="hover:text-indigo-600 transition">Lectures</a>
+          <a href="students.html"  class="hover:text-indigo-600 transition">Students</a>
+          <a href="announcements.html" class="hover:text-indigo-600 transition">Announcements</a>
+          <a href="banners.html" class="text-indigo-600">Banners</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== PAGE CONTENT ========== -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-3xl font-bold text-slate-900">Manage Banners</h1>
+      <button id="addBtn"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition">
+        ➕ Add Banner
+      </button>
+    </div>
+
+    <!-- Form Card -->
+    <section id="formSection" class="bg-white rounded-xl shadow p-6 mb-8 hidden">
+      <h2 id="formTitle" class="text-xl font-semibold mb-4">Add Banner</h2>
+      <form id="form" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input name="title" placeholder="Banner Title" required
+                 class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input name="imageUrl" placeholder="Image URL (https://...)" required
+                 class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <input name="link" placeholder="Link URL (where banner leads)" 
+               class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+        <div class="flex items-center gap-6">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input name="isActive" type="checkbox"
+                   class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+            <span class="text-sm font-medium">Active</span>
+          </label>
+
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-medium">Order:</label>
+            <input name="order" type="number" min="0" placeholder="0"
+                   class="w-20 border rounded-md px-3 py-2 text-center focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button type="submit" id="submitBtn"
+                  class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition">
+            Save
+          </button>
+          <button type="button" id="cancelBtn"
+                  class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 transition">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Table Card -->
+    <section class="bg-white rounded-xl shadow overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3">Preview</th>
+            <th class="px-4 py-3">Title</th>
+            <th class="px-4 py-3 text-center">Order</th>
+            <th class="px-4 py-3 text-center">Status</th>
+            <th class="px-4 py-3">Link</th>
+            <th class="px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="listBody" class="divide-y divide-slate-100">
+          <!-- rows injected here -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- ========== JS ========== -->
+  <script>
+    const form       = document.getElementById('form');
+    const listBody   = document.getElementById('listBody');
+    const addBtn     = document.getElementById('addBtn');
+    const cancelBtn  = document.getElementById('cancelBtn');
+    const formTitle  = document.getElementById('formTitle');
+    const submitBtn  = document.getElementById('submitBtn');
+    const formSection = document.getElementById('formSection');
+    let editId = null;
+
+    // Initialize with sample data to demonstrate edit/delete functionality
+    let banners = [
+      {
+        id: '1',
+        title: 'Welcome to New Semester',
+        imageUrl: 'https://via.placeholder.com/400x200/4F46E5/FFFFFF?text=Welcome+Banner',
+        link: 'https://university.edu/welcome',
+        isActive: 'TRUE',
+        order: 1
+      },
+      {
+        id: '2',
+        title: 'Sports Week Registration',
+        imageUrl: 'https://via.placeholder.com/400x200/059669/FFFFFF?text=Sports+Week',
+        link: 'https://university.edu/sports',
+        isActive: 'TRUE',
+        order: 2
+      },
+      {
+        id: '3',
+        title: 'Library Services',
+        imageUrl: 'https://via.placeholder.com/400x200/DC2626/FFFFFF?text=Library+Services',
+        link: 'https://university.edu/library',
+        isActive: 'FALSE',
+        order: 3
+      }
+    ];
+
+    function showForm(show = true) {
+      formSection.classList.toggle('hidden', !show);
+      if (show) {
+        formSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    function resetForm() {
+      form.reset();
+      editId = null;
+      formTitle.textContent = 'Add Banner';
+      submitBtn.textContent = 'Save';
+    }
+
+    addBtn.addEventListener('click', () => {
+      resetForm();
+      showForm(true);
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      showForm(false);
+      resetForm();
+    });
+
+    async function load() {
+      // Try to fetch from API, fallback to local storage, then sample data
+      try {
+        const data = await fetch('/api/banners').then(r => r.json());
+        banners = data;
+      } catch (error) {
+        // Fallback to local storage if API is not available
+        const stored = localStorage.getItem('banners');
+        if (stored) {
+          banners = JSON.parse(stored);
+        }
+        // If no stored data, keep the sample data initialized above
+      }
+
+      listBody.innerHTML = banners.length
+        ? banners.map(b => `
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3">
+                <img src="${b.imageUrl}" alt="${b.title}" 
+                     class="h-16 w-28 object-cover rounded border"
+                     onerror="this.src='https://via.placeholder.com/112x64/E5E7EB/6B7280?text=No+Image'">
+              </td>
+              <td class="px-4 py-3 font-medium">${b.title}</td>
+              <td class="px-4 py-3 text-center">
+                <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">${b.order}</span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                ${b.isActive === 'TRUE' || b.isActive === true ? 
+                  '<span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Active</span>' : 
+                  '<span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Inactive</span>'}
+              </td>
+              <td class="px-4 py-3">
+                ${b.link ? `<a href="${b.link}" target="_blank" class="text-indigo-600 hover:text-indigo-800 hover:underline">🔗 View</a>` : '<span class="text-slate-400">—</span>'}
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex space-x-2">
+                  <button onclick="editBan('${b.id}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">Edit</button>
+                  <button onclick="deleteBan('${b.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">Delete</button>
+                </div>
+              </td>
+            </tr>`).join('')
+        : `<tr><td colspan="6" class="text-center py-8 text-slate-500">No banners found. Add one above!</td></tr>`;
+    }
+
+    async function editBan(id) {
+      let banner;
+      try {
+        banner = await fetch(`/api/banners/${id}`).then(r => r.json());
+      } catch (error) {
+        // Fallback to local data
+        banner = banners.find(b => b.id === id);
+      }
+
+      if (banner) {
+        form.title.value = banner.title || '';
+        form.imageUrl.value = banner.imageUrl || '';
+        form.link.value = banner.link || '';
+        form.order.value = (banner.order ?? 0).toString();
+        form.isActive.checked = String(banner.isActive).toUpperCase() === 'TRUE' || banner.isActive === true;
+        editId = id;
+        formTitle.textContent = 'Edit Banner';
+        submitBtn.textContent = 'Update';
+        showForm(true);
+      }
+    }
+
+    async function deleteBan(id) {
+      if (!confirm('Delete banner?')) return;
+      
+      try {
+        await fetch(`/api/banners/${id}`, { method: 'DELETE' });
+      } catch (error) {
+        // Fallback to local storage
+        banners = banners.filter(b => b.id !== id);
+        localStorage.setItem('banners', JSON.stringify(banners));
+      }
+      
+      load();
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      data.isActive = form.isActive.checked ? 'TRUE' : 'FALSE';
+      data.order = parseInt(data.order) || 0;
+      
+      try {
+        const method = editId ? 'PUT' : 'POST';
+        const url = editId ? `/api/banners/${editId}` : '/api/banners';
+        await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } catch (error) {
+        // Fallback to local storage
+        if (editId) {
+          const index = banners.findIndex(b => b.id === editId);
+          if (index !== -1) {
+            banners[index] = { ...data, id: editId };
+          }
+        } else {
+          const newBanner = { ...data, id: Date.now().toString() };
+          banners.push(newBanner);
+        }
+        localStorage.setItem('banners', JSON.stringify(banners));
+      }
+      
+      resetForm();
+      showForm(false);
+      load();
+    });
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Announcements CRUD</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+  <!-- ========== NAVBAR ========== -->
+  <nav class="bg-white shadow sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <span class="text-xl font-bold text-indigo-600">Dashboard</span>
+        <div class="space-x-2 sm:space-x-4 text-sm font-medium">
+          <a href="/"          class="hover:text-indigo-600 transition">Home</a>
+          <a href="lectures.html"  class="hover:text-indigo-600 transition">Lectures</a>
+          <a href="students.html"  class="hover:text-indigo-600 transition">Students</a>
+          <a href="announcements.html" class="text-indigo-600">Announcements</a>
+          <a href="banners.html" class="hover:text-indigo-600 transition">Banners</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== PAGE CONTENT ========== -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Form Card -->
+    <section id="formSection" class="bg-white rounded-xl shadow p-6 mb-8">
+      <h2 id="formTitle" class="text-xl font-semibold mb-4">Add Announcement</h2>
+      <form id="form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="sm:col-span-2 lg:col-span-3">
+          <input name="title" placeholder="Title" required class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div class="sm:col-span-2 lg:col-span-3">
+          <textarea name="message" placeholder="Message" required rows="3" class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+        </div>
+        <input name="category" placeholder="Category" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <select name="priority" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+          <option value="">Select Priority</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        <input name="date" type="date" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <input name="deadline" type="date" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <input name="location" placeholder="Location (optional)" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <input name="contact" placeholder="Contact email (optional)" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <input name="link" placeholder="External link (optional)" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <input name="image" placeholder="Image URL (optional)" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <input name="video" placeholder="Video URL (optional)" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+        <div class="sm:col-span-2 lg:col-span-3 flex gap-2">
+          <button type="submit" id="submitBtn"
+                  class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition">
+            Save
+          </button>
+          <button type="button" id="cancelBtn"
+                  class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 transition">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Table Card -->
+    <section class="bg-white rounded-xl shadow overflow-x-auto">
+      <table id="list" class="w-full text-sm text-left">
+        <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3">Title</th>
+            <th class="px-4 py-3">Message</th>
+            <th class="px-4 py-3">Category</th>
+            <th class="px-4 py-3">Priority</th>
+            <th class="px-4 py-3">Date</th>
+            <th class="px-4 py-3">Deadline</th>
+            <th class="px-4 py-3">Location</th>
+            <th class="px-4 py-3">Contact</th>
+            <th class="px-4 py-3">Links</th>
+            <th class="px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100" id="listBody">
+          <!-- rows injected here -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- ========== JS ========== -->
+  <script>
+    const form       = document.getElementById('form');
+    const list       = document.getElementById('list');
+    const formTitle  = document.getElementById('formTitle');
+    const submitBtn  = document.getElementById('submitBtn');
+    const cancelBtn  = document.getElementById('cancelBtn');
+    let editId = null;
+
+    // Initialize with sample data to demonstrate edit/delete functionality
+    let announcements = [
+      {
+        id: '1',
+        title: 'Mid-term Examinations',
+        message: 'Mid-term examinations will be conducted from March 15-25, 2024. All students are required to attend.',
+        category: 'Academic',
+        priority: 'high',
+        date: '2024-03-10',
+        deadline: '2024-03-25',
+        location: 'Main Campus',
+        contact: 'exams@university.edu',
+        link: 'https://university.edu/exams',
+        image: '',
+        video: ''
+      },
+      {
+        id: '2',
+        title: 'Cultural Festival Registration',
+        message: 'Registration for the annual cultural festival is now open. Join us for three days of music, dance, and fun!',
+        category: 'Event',
+        priority: 'medium',
+        date: '2024-03-05',
+        deadline: '2024-03-20',
+        location: 'Student Center',
+        contact: 'events@university.edu',
+        link: 'https://university.edu/cultural-fest',
+        image: '',
+        video: ''
+      },
+      {
+        id: '3',
+        title: 'Library Maintenance',
+        message: 'The library will be closed for maintenance work this weekend. Online resources will remain available.',
+        category: 'Notice',
+        priority: 'low',
+        date: '2024-03-08',
+        deadline: '',
+        location: 'Central Library',
+        contact: 'library@university.edu',
+        link: '',
+        image: '',
+        video: ''
+      }
+    ];
+
+    function resetForm() {
+      form.reset(); editId = null;
+      formTitle.textContent = 'Add Announcement';
+      submitBtn.textContent = 'Save';
+    }
+
+    cancelBtn.addEventListener('click', resetForm);
+
+    function getPriorityBadge(priority) {
+      const badges = {
+        'high': 'bg-red-100 text-red-800',
+        'medium': 'bg-yellow-100 text-yellow-800',
+        'low': 'bg-green-100 text-green-800'
+      };
+      return `<span class="px-2 py-1 rounded-full text-xs font-medium ${badges[priority] || 'bg-gray-100 text-gray-800'}">${priority}</span>`;
+    }
+
+    function truncateText(text, maxLength = 50) {
+      if (!text) return '';
+      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    }
+
+    async function load() {
+      // Try to fetch from API, fallback to local storage, then sample data
+      try {
+        const data = await fetch('/api/announcements').then(r => r.json());
+        announcements = data;
+      } catch (error) {
+        // Fallback to local storage if API is not available
+        const stored = localStorage.getItem('announcements');
+        if (stored) {
+          announcements = JSON.parse(stored);
+        }
+        // If no stored data, keep the sample data initialized above
+      }
+      
+      const tbody = document.getElementById('listBody');
+      tbody.innerHTML = announcements.length
+        ? announcements.map(a => `
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 font-medium">${a.title}</td>
+              <td class="px-4 py-3">${truncateText(a.message)}</td>
+              <td class="px-4 py-3">${a.category}</td>
+              <td class="px-4 py-3">${getPriorityBadge(a.priority)}</td>
+              <td class="px-4 py-3">${a.date}</td>
+              <td class="px-4 py-3">${a.deadline || '-'}</td>
+              <td class="px-4 py-3">${a.location || '-'}</td>
+              <td class="px-4 py-3">${a.contact || '-'}</td>
+              <td class="px-4 py-3">
+                <div class="flex space-x-1">
+                  ${a.link ? `<a href="${a.link}" target="_blank" class="text-indigo-600 hover:text-indigo-800" title="External Link">🔗</a>` : ''}
+                  ${a.image ? `<a href="${a.image}" target="_blank" class="text-blue-600 hover:text-blue-800" title="Image">📷</a>` : ''}
+                  ${a.video ? `<a href="${a.video}" target="_blank" class="text-red-600 hover:text-red-800" title="Video">🎥</a>` : ''}
+                  ${!a.link && !a.image && !a.video ? '-' : ''}
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex space-x-2">
+                  <button onclick="editAnn('${a.id}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">Edit</button>
+                  <button onclick="deleteAnn('${a.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">Delete</button>
+                </div>
+              </td>
+            </tr>`).join('')
+        : `<tr><td colspan="10" class="text-center py-8 text-slate-500">No announcements found. Add one above!</td></tr>`;
+    }
+
+    async function editAnn(id) {
+      let announcement;
+      try {
+        announcement = await fetch(`/api/announcements/${id}`).then(r => r.json());
+      } catch (error) {
+        // Fallback to local data
+        announcement = announcements.find(a => a.id === id);
+      }
+      
+      if (announcement) {
+        Object.keys(announcement).forEach(k => { if (form[k]) form[k].value = announcement[k]; });
+        editId = id;
+        formTitle.textContent = 'Edit Announcement';
+        submitBtn.textContent = 'Update';
+        document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    async function deleteAnn(id) {
+      if (!confirm('Delete announcement?')) return;
+      
+      try {
+        await fetch(`/api/announcements/${id}`, { method: 'DELETE' });
+      } catch (error) {
+        // Fallback to local storage
+        announcements = announcements.filter(a => a.id !== id);
+        localStorage.setItem('announcements', JSON.stringify(announcements));
+      }
+      
+      load();
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      
+      try {
+        const method = editId ? 'PUT' : 'POST';
+        const url = editId ? `/api/announcements/${editId}` : '/api/announcements';
+        await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      } catch (error) {
+        // Fallback to local storage
+        if (editId) {
+          const index = announcements.findIndex(a => a.id === editId);
+          if (index !== -1) {
+            announcements[index] = { ...data, id: editId };
+          }
+        } else {
+          const newAnnouncement = { ...data, id: Date.now().toString() };
+          announcements.push(newAnnouncement);
+        }
+        localStorage.setItem('announcements', JSON.stringify(announcements));
+      }
+      
+      resetForm(); 
+      load();
+    });
+
+    load();
+  </script>
+</body>
+</html>
