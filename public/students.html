@@ -7,7 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <script>
-  window.USE_DEMO = true; // Switch to false to go live
+  window.USE_DEMO = false; // Set to false to use live API
 </script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans">
@@ -99,505 +99,430 @@ Upload an Excel (.xlsx, .xls) or CSV file. Ensure the first row contains headers
 <tbody class="divide-y divide-slate-100" id="listBody">
 </tbody>
 </table>
+<div class="flex justify-between items-center px-4 py-3 bg-slate-100 text-sm" id="paginationControls">
+  <button id="prevPage" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Previous</button>
+  <span id="pageInfo" class="text-slate-600"></span>
+  <button id="nextPage" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Next</button>
+</div>
 </section>
 </main>
 <script>
-const form = document.getElementById('form');
-const list = document.getElementById('list');
-const formTitle = document.getElementById('formTitle');
-const submitBtn = document.getElementById('submitBtn');
-const cancelBtn = document.getElementById('cancelBtn');
-const bulkImportExcelFile = document.getElementById('bulkImportExcelFile');
-const importExcelBtn = document.getElementById('importExcelBtn');
-let editId = null;
-let students = [];
+    const form = document.getElementById('form');
+    const list = document.getElementById('list');
+    const formTitle = document.getElementById('formTitle');
+    const submitBtn = document.getElementById('submitBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const bulkImportExcelFile = document.getElementById('bulkImportExcelFile');
+    const importExcelBtn = document.getElementById('importExcelBtn');
+    let editId = null;
+    let students = [];
+    let currentPage = 1;
+    const perPage = 30;
+    let totalStudentsCount = 0;
 
-const dropdownData = {
-'D.Pharm': {
-years: ['1st Year', '2nd Year'],
-batches: ['D- Batch D.Pharm', 'E- Batch D.Pharm', 'F- Batch D.Pharm']
-},
-'B.Pharm': {
-years: ['sem 1', 'sem 2', 'sem 3', 'sem 4', 'sem 5', 'sem 6', 'sem 7', 'sem 8'],
-batches: ['24-25 B.Pharm', '25-26 B.Pharm']
-},
-'GNM': {
-years: ['1st Year', '2nd Year', '3rd Year'],
-batches: ['E- Batch Gnm', 'F- Batch Gnm']
-}
-};
+    const dropdownData = {
+        'D.Pharm': {
+            years: ['1st Year', '2nd Year'],
+            batches: ['D- Batch D.Pharm', 'E- Batch D.Pharm', 'F- Batch D.Pharm']
+        },
+        'B.Pharm': {
+            years: ['sem 1', 'sem 2', 'sem 3', 'sem 4', 'sem 5', 'sem 6', 'sem 7', 'sem 8'],
+            batches: ['24-25 B.Pharm', '25-26 B.Pharm']
+        },
+        'GNM': {
+            years: ['1st Year', '2nd Year', '3rd Year'],
+            batches: ['E- Batch Gnm', 'F- Batch Gnm']
+        }
+    };
 
-document.querySelector('select[name="course"]').addEventListener('change', function() {
-const selectedCourse = this.value;
-const batchSelect = document.querySelector('select[name="batch"]');
-const yearSelect = document.querySelector('select[name="year"]');
-batchSelect.innerHTML = '<option value="">Select Batch</option>';
-yearSelect.innerHTML = '<option value="">Select Year</option>';
-if (selectedCourse && dropdownData[selectedCourse]) {
-const courseData = dropdownData[selectedCourse];
-courseData.batches.forEach(batch => {
-const option = document.createElement('option');
-option.value = batch;
-option.textContent = batch;
-batchSelect.appendChild(option);
-});
-courseData.years.forEach(year => {
-const option = document.createElement('option');
-option.value = year;
-option.textContent = year;
-yearSelect.appendChild(option);
-});
-}
-});
+    document.querySelector('select[name="course"]').addEventListener('change', function() {
+        const selectedCourse = this.value;
+        const batchSelect = document.querySelector('select[name="batch"]');
+        const yearSelect = document.querySelector('select[name="year"]');
+        batchSelect.innerHTML = '<option value="">Select Batch</option>';
+        yearSelect.innerHTML = '<option value="">Select Year</option>';
+        if (selectedCourse && dropdownData[selectedCourse]) {
+            const courseData = dropdownData[selectedCourse];
+            courseData.batches.forEach(batch => {
+                const option = document.createElement('option');
+                option.value = batch;
+                option.textContent = batch;
+                batchSelect.appendChild(option);
+            });
+            courseData.years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+        }
+    });
 
-function resetForm() {
-form.reset();
-editId = null;
-formTitle.textContent = 'Add Student';
-submitBtn.textContent = 'Save';
-const batchSelect = document.querySelector('select[name="batch"]');
-const yearSelect = document.querySelector('select[name="year"]');
-batchSelect.innerHTML = '<option value="">Select Batch</option>';
-yearSelect.innerHTML = '<option value="">Select Year</option>';
-}
-
-cancelBtn.addEventListener('click', resetForm);
-
-async function load() {
-console.log('=== LOAD FUNCTION START ===');
-const stored = localStorage.getItem('students');
-let localStudents = [];
-if (stored) {
-try {
-localStudents = JSON.parse(stored);
-console.log('Loaded students from localStorage:', localStudents.length);
-} catch (e) {
-console.error("Error parsing stored students data:", e);
-localStudents = [];
-}
-}
-let apiStudents = [];
-
-if (window.USE_DEMO) {
-  try {
-    const response = await fetch('/demo/students.json');
-    if (response.ok) {
-      apiStudents = await response.json();
-      apiStudents = apiStudents.filter(s => !s.id || !s.id.includes('excel_'));
-      console.log('Loaded students from DEMO:', apiStudents.length);
-    } else {
-      throw new Error('Demo file not found');
+    function resetForm() {
+        form.reset();
+        editId = null;
+        formTitle.textContent = 'Add Student';
+        submitBtn.textContent = 'Save';
+        const batchSelect = document.querySelector('select[name="batch"]');
+        const yearSelect = document.querySelector('select[name="year"]');
+        batchSelect.innerHTML = '<option value="">Select Batch</option>';
+        yearSelect.innerHTML = '<option value="">Select Year</option>';
     }
-  } catch (err) {
-    console.warn('DEMO load failed:', err);
-  }
-} else {
-  try {
-    const response = await fetch('/api/students');
-    if (response.ok) {
-      apiStudents = await response.json();
-      apiStudents = apiStudents.filter(s => !s.id || !s.id.includes('excel_'));
-      console.log('Loaded students from API:', apiStudents.length);
-    } else {
-      throw new Error('API not available');
+
+    cancelBtn.addEventListener('click', resetForm);
+
+    // 1. Eliminate Local Storage Fallbacks in load()
+    async function load() {
+        console.log('=== LOAD FUNCTION START (Paginated) ===');
+        let apiStudents = [];
+        if (window.USE_DEMO) {
+            // KEEP this demo logic as is for client-side pagination simulation
+            try {
+                const response = await fetch('/demo/students.json');
+                if (response.ok) {
+                    let allDemoStudents = await response.json();
+                    allDemoStudents = allDemoStudents.filter(s => !s.id || !s.id.includes('excel_'));
+                    totalStudentsCount = allDemoStudents.length;
+                    const start = (currentPage - 1) * perPage;
+                    const end = start + perPage;
+                    apiStudents = allDemoStudents.slice(start, end);
+                    console.log('Loaded paginated students from DEMO:', apiStudents.length);
+                } else {
+                    throw new Error('Demo file not found');
+                }
+            } catch (err) {
+                console.warn('DEMO load failed:', err);
+            }
+        } else {
+            // --- MODIFIED CODE START ---
+            try {
+                const response = await fetch(`/api/students?page=${currentPage}&limit=${perPage}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    apiStudents = data.students || [];
+                    totalStudentsCount = data.totalStudents || 0;
+                    console.log('Loaded paginated students from API:', apiStudents.length);
+                    console.log('Total students (from API):', totalStudentsCount);
+                } else {
+                    // If API fails, DO NOT fall back to localStorage for live data
+                    console.error(`Failed to load students from API: ${response.status} - ${await response.text()}`);
+                    apiStudents = []; // Clear current page students on API failure
+                    totalStudentsCount = 0; // Reset total count
+                    alert('Failed to load students from the server. Please try again.'); // User feedback
+                }
+            } catch (err) {
+                console.error('Network error during API load:', err);
+                apiStudents = []; // Clear current page students on network error
+                totalStudentsCount = 0; // Reset total count
+                alert('Could not connect to the server. Please check your network connection and try again.'); // User feedback
+            }
+            // --- MODIFIED CODE END ---
+        }
+        students = apiStudents;
+        console.log('Final students array (current page):', students.length);
+        renderTablePage();
+        console.log('=== LOAD FUNCTION END (Paginated) ===');
     }
-  } catch (err) {
-    console.warn('API load failed:', err);
-  }
-}
 
-const excelStudents = localStudents.filter(local => local.id && local.id.includes('excel_'));
-console.log('Excel students from localStorage:', excelStudents.length);
-if (apiStudents.length > 0) {
-students = [...apiStudents, ...excelStudents];
-} else {
-students = localStudents;
-}
-console.log('Final merged students array:', students.length);
-console.log('Excel students in final array:', students.filter(s => s.id && s.id.includes('excel_')).length);
-console.log('API students in final array:', students.filter(s => s.id && !s.id.includes('excel_')).length);
-const tbody = document.getElementById('listBody');
-tbody.innerHTML = students.length
-? students.map(s => `
-<tr class="hover:bg-slate-50">
-<td class="px-4 py-3">${s.number}</td>
-<td class="px-4 py-3">${s.name}</td>
-<td class="px-4 py-3">${s.course}</td>
-<td class="px-4 py-3">${s.batch}</td>
-<td class="px-4 py-3">${s.year}</td>
-<td class="px-4 py-3">${s.branch}</td>
-<td class="px-4 py-3">${s.admissionYear}</td>
-<td class="px-4 py-3">₹${s.pendingFees}</td>
-<td class="px-4 py-3">${s.Role}</td>
-<td class="px-4 py-3">${s.Faculty}</td>
-<td class="px-4 py-3">
-<div class="flex space-x-2">
-<button onclick="editStudent('${s.id}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">Edit</button>
-<button onclick="deleteStudent('${s.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">Delete</button>
-</div>
-</td>
-</tr>`).join('')
-: `<tr><td colspan="11" class="text-center py-8 text-slate-500">No students found. Add one above!</td></tr>`;
-console.log('=== LOAD FUNCTION END ===');
-}
+    function renderTablePage() {
+        const tbody = document.getElementById('listBody');
+        tbody.innerHTML = students.length
+            ? students.map(s => `
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-3">${s.number}</td>
+                  <td class="px-4 py-3">${s.name}</td>
+                  <td class="px-4 py-3">${s.course}</td>
+                  <td class="px-4 py-3">${s.batch}</td>
+                  <td class="px-4 py-3">${s.year}</td>
+                  <td class="px-4 py-3">${s.branch}</td>
+                  <td class="px-4 py-3">${s.admissionYear}</td>
+                  <td class="px-4 py-3">₹${s.pendingFees}</td>
+                  <td class="px-4 py-3">${s.Role}</td>
+                  <td class="px-4 py-3">${s.Faculty}</td>
+                  <td class="px-4 py-3">
+                    <div class="flex space-x-2">
+                      <button onclick="editStudent('${s.id}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">Edit</button>
+                      <button onclick="deleteStudent('${s.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">Delete</button>
+                    </div>
+                  </td>
+                </tr>`).join('')
+            : `<tr><td colspan="11" class="text-center py-8 text-slate-500">No students found on this page.</td></tr>`;
+        
+        // Pagination UI
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        
+        const totalPages = Math.ceil(totalStudentsCount / perPage);
 
-window.editStudent = async function(id) {
-let student;
-try {
-const response = await fetch(`/api/students/${id}`);
-if (response.ok) {
-student = await response.json();
-} else {
-throw new Error('API not available for fetching student');
-}
-} catch (error) {
-console.log('API not available, falling back to local data for edit.', error);
-student = students.find(s => s.id === id);
-}
-if (student) {
-Object.keys(student).forEach(k => { 
-if (form[k]) form[k].value = student[k]; 
-});
-const courseSelect = document.querySelector('select[name="course"]');
-const batchSelect = document.querySelector('select[name="batch"]');
-const yearSelect = document.querySelector('select[name="year"]');
-if (student.course && dropdownData[student.course]) {
-const courseData = dropdownData[student.course];
-batchSelect.innerHTML = '<option value="">Select Batch</option>';
-courseData.batches.forEach(batch => {
-const option = document.createElement('option');
-option.value = batch;
-option.textContent = batch;
-if (batch === student.batch) option.selected = true;
-batchSelect.appendChild(option);
-});
-yearSelect.innerHTML = '<option value="">Select Year</option>';
-courseData.years.forEach(year => {
-const option = document.createElement('option');
-option.value = year;
-option.textContent = year;
-if (year === student.year) option.selected = true;
-yearSelect.appendChild(option);
-});
-}
-editId = id;
-formTitle.textContent = 'Edit Student';
-submitBtn.textContent = 'Update';
-document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
-}
-};
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage >= totalPages;
+    }
 
-window.deleteStudent = async function(id) {
-if (!confirm('Delete student?')) return;
-console.log('=== DELETE OPERATION START ===');
-console.log('Attempting to delete student with ID:', id);
-const studentToDelete = students.find(s => s.id === id);
-console.log('Student found for deletion:', studentToDelete);
-if (!studentToDelete) {
-console.error('Student not found in students array!');
-alert('Student not found! Please refresh the page and try again.');
-return;
-}
-const isExcelImport = id.includes('excel_');
-console.log('Is Excel import:', isExcelImport);
-console.log('Student phone number:', studentToDelete.number);
-let apiDeleteSuccess = false;
-let deleteAttempts = [];
-try {
-console.log('Attempt 1: Deleting by ID');
-const response = await fetch(`/api/students/${id}`, { method: 'DELETE' });
-deleteAttempts.push(`ID deletion: ${response.status}`);
-if (response.ok) {
-console.log('✅ Student deleted successfully from database by ID');
-apiDeleteSuccess = true;
-} else {
-console.log(`❌ API delete by ID failed with status: ${response.status}`);
-const errorText = await response.text();
-console.log('API error details:', errorText);
-}
-} catch (error) {
-console.log('❌ API delete by ID error:', error.message);
-deleteAttempts.push(`ID deletion error: ${error.message}`);
-}
-if (!apiDeleteSuccess) {
-try {
-console.log('Attempt 2: Deleting by phone number');
-const phoneResponse = await fetch(`/api/students/phone/${studentToDelete.number}`, { method: 'DELETE' });
-deleteAttempts.push(`Phone deletion: ${phoneResponse.status}`);
-if (phoneResponse.ok) {
-console.log('✅ Student deleted successfully from database by phone');
-apiDeleteSuccess = true;
-} else {
-console.log(`❌ Delete by phone failed with status: ${phoneResponse.status}`);
-}
-} catch (phoneError) {
-console.log('❌ Delete by phone error:', phoneError.message);
-deleteAttempts.push(`Phone deletion error: ${phoneError.message}`);
-}
-}
-if (!apiDeleteSuccess) {
-try {
-console.log('Attempt 3: Finding and deleting by phone number from all students');
-const allStudentsResponse = await fetch('/api/students');
-if (allStudentsResponse.ok) {
-const allStudents = await allStudentsResponse.json();
-const matchingStudent = allStudents.find(s => s.number === studentToDelete.number);
-if (matchingStudent) {
-console.log('Found matching student in database:', matchingStudent);
-const matchDeleteResponse = await fetch(`/api/students/${matchingStudent.id}`, { method: 'DELETE' });
-deleteAttempts.push(`Match deletion: ${matchDeleteResponse.status}`);
-if (matchDeleteResponse.ok) {
-console.log('✅ Student deleted successfully from database by matched ID');
-apiDeleteSuccess = true;
-} else {
-console.log(`❌ Delete by matched ID failed with status: ${matchDeleteResponse.status}`);
-}
-} else {
-console.log('❌ No matching student found in database');
-deleteAttempts.push('No matching student found');
-}
-}
-} catch (matchError) {
-console.log('❌ Match and delete error:', matchError.message);
-deleteAttempts.push(`Match deletion error: ${matchError.message}`);
-}
-}
-const initialLength = students.length;
-students = students.filter(s => s.id !== id);
-console.log('Students array length before:', initialLength, 'after:', students.length);
-localStorage.setItem('students', JSON.stringify(students));
-console.log('Updated localStorage with', students.length, 'students');
-console.log('Delete attempts summary:', deleteAttempts);
-if (apiDeleteSuccess) {
-console.log('✅ FINAL RESULT: Student deleted from both database and localStorage');
-alert('Student deleted successfully from both database and local storage!');
-} else {
-console.log('⚠️ FINAL RESULT: Student deleted from localStorage only (database deletion failed)');
-alert('Student deleted from local storage. Database deletion failed - check console for details.');
-}
-console.log('=== DELETE OPERATION END ===');
-load();
-};
+    document.getElementById('prevPage').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            load();
+        }
+    });
 
-form.addEventListener('submit', async e => {
-e.preventDefault();
-const data = Object.fromEntries(new FormData(form));
-if (!editId) {
-const existingStudent = students.find(s => s.number === data.number);
-if (existingStudent) {
-alert(`A student with phone number ${data.number} already exists: ${existingStudent.name}`);
-return;
-}
-}
-try {
-const method = editId ? 'PUT' : 'POST';
-const url = editId ? `/api/students/${editId}` : '/api/students';
-const response = await fetch(url, { 
-method, 
-headers: { 'Content-Type': 'application/json' }, 
-body: JSON.stringify(data) 
-});
-if (!response.ok) {
-const errorText = await response.text();
-if (errorText.includes('already exists') || errorText.includes('duplicate')) {
-alert(`A student with phone number ${data.number} already exists in the database.`);
-return;
-}
-throw new Error('API submission failed');
-}
-} catch (error) {
-console.log('API submission not available, falling back to local storage.', error);
-if (editId) {
-const index = students.findIndex(s => s.id === editId);
-if (index !== -1) {
-students[index] = { ...data, id: editId };
-}
-} else {
-const newStudent = { ...data, id: Date.now().toString() };
-students.push(newStudent);
-}
-localStorage.setItem('students', JSON.stringify(students));
-}
-resetForm(); 
-load();
-});
+    document.getElementById('nextPage').addEventListener('click', () => {
+        const totalPages = Math.ceil(totalStudentsCount / perPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            load();
+        }
+    });
 
-const headerMap = {
-"phone": "number",
-"name": "name",
-"course": "course",
-"batch": "batch",
-"year": "year",
-"branch": "branch",
-"admission year": "admissionYear",
-"pending fees": "pendingFees",
-"role": "Role",
-"faculty": "Faculty",
-"password": "password"
-};
+    // 5. Simplify editStudent() Fallback
+    window.editStudent = async function(id) {
+        let student;
+        try {
+            const response = await fetch(`/api/students/${id}`);
+            if (response.ok) {
+                student = await response.json();
+            } else {
+                const errorText = await response.text();
+                console.error(`Failed to fetch student for edit: ${response.status} - ${errorText}`);
+                throw new Error('API not available for fetching student'); // Force error for consistent handling
+            }
+        } catch (error) {
+            console.error('Error fetching student for edit:', error);
+            // --- MODIFIED CODE START ---
+            // If API is down or single student fetch fails, inform user and prevent edit
+            alert('Failed to retrieve student details for editing. Please check server connection.');
+            return; // IMPORTANT: Exit function if student cannot be fetched from API
+            // --- MODIFIED CODE END ---
+        }
 
-importExcelBtn.addEventListener('click', () => {
-const file = bulkImportExcelFile.files[0];
-if (!file) {
-alert('Please select an Excel or CSV file to import.');
-return;
-}
-const reader = new FileReader();
-reader.onload = async (e) => {
-try {
-const data = new Uint8Array(e.target.result);
-const workbook = XLSX.read(data, { type: 'array' });
-const sheetName = workbook.SheetNames[0];
-const worksheet = workbook.Sheets[sheetName];
-let importedData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-if (importedData.length < 2) {
-alert('No data found in the selected sheet beyond headers.');
-return;
-}
-const headers = importedData[0];
-const rows = importedData.slice(1);
-let parsedStudents = [];
-for (const row of rows) {
-let student = {};
-let isValidRow = true;
-for (let i = 0; i < headers.length; i++) {
-const excelHeaderRaw = headers[i];
-if (excelHeaderRaw === null || excelHeaderRaw === undefined || String(excelHeaderRaw).trim() === '') {
-continue;
-}
-const excelHeaderNormalized = String(excelHeaderRaw).trim().toLowerCase();
-const jsKey = headerMap[excelHeaderNormalized];
-if (jsKey) {
-let value = row[i];
-if (jsKey === 'number') {
-value = String(value || '').trim();
-}
-if (jsKey === 'pendingFees') {
-value = String(value || '').replace(/[^\d.-]/g, '').trim(); 
-}
-if (jsKey === 'password') {
-value = String(value || 'default123').trim();
-}
-student[jsKey] = value;
-}
-}
-if (!student.number || !student.name || !student.course || !student.password) {
-console.warn('Skipping row due to missing essential data:', student, row);
-isValidRow = false;
-}
-if (isValidRow) {
-parsedStudents.push(student);
-}
-}
-if (parsedStudents.length === 0) {
-alert('No valid student data could be parsed from the file. Please check headers and data.');
-return;
-}
-console.log('Importing', parsedStudents.length, 'students...');
-let successfulImports = 0;
-let failedImports = 0;
-let importedStudents = [];
-for (const studentData of parsedStudents) {
-const existingStudent = students.find(s => s.number === studentData.number);
-if (existingStudent) {
-console.warn(`Skipping duplicate student with phone number: ${studentData.number} (${studentData.name})`);
-continue;
-}
-const newId = 'excel_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-const studentToSave = { ...studentData, id: newId }; 
-console.log('Importing student:', studentToSave.name, 'with ID:', studentToSave.id);
-try {
-const response = await fetch('/api/students', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(studentToSave)
-});
-if (response.ok) {
-const savedStudent = await response.json();
-if (savedStudent && savedStudent.id) {
-studentToSave.id = savedStudent.id;
-console.log('API returned ID:', savedStudent.id);
-}
-successfulImports++;
-importedStudents.push(studentToSave);
-} else {
-const errorText = await response.text();
-if (errorText.includes('already exists') || errorText.includes('duplicate')) {
-console.warn(`Duplicate student skipped: ${studentToSave.name} (${studentToSave.number})`);
-continue;
-}
-throw new Error(`API error: ${response.status} - ${errorText}`);
-}
-} catch (error) {
-console.warn(`Failed to import student via API: ${studentToSave.name || studentToSave.number}. Adding to local storage.`, error);
-failedImports++;
-importedStudents.push(studentToSave);
-}
-}
-console.log('Adding imported students to main array:', importedStudents.length);
-students = [...students, ...importedStudents];
-localStorage.setItem('students', JSON.stringify(students));
-console.log('Final students array length:', students.length);
-if (failedImports > 0) { 
-localStorage.setItem('students', JSON.stringify(students));
-}
-const duplicatesSkipped = parsedStudents.length - successfulImports - failedImports;
-let message = `Excel import complete! Successfully imported ${successfulImports} students.`;
-if (failedImports > 0) {
-message += ` Failed to import ${failedImports} students.`;
-}
-if (duplicatesSkipped > 0) {
-message += ` Skipped ${duplicatesSkipped} duplicate entries.`;
-}
-message += ' Check console for details.';
-alert(message);
-load();
-bulkImportExcelFile.value = '';
-} catch (error) {
-console.error('Error processing Excel/CSV file:', error);
-alert('An error occurred while processing the file. Please check the console for details and ensure the file format and headers are correct.');
-}
-};
-reader.onerror = (error) => {
-console.error('File reader error:', error);
-alert('Failed to read file. Make sure it is a valid Excel or CSV.');
-};
-reader.readAsArrayBuffer(file);
-});
+        if (student) {
+            Object.keys(student).forEach(k => { 
+                if (form[k]) form[k].value = student[k]; 
+            });
+            const courseSelect = document.querySelector('select[name="course"]');
+            const batchSelect = document.querySelector('select[name="batch"]');
+            const yearSelect = document.querySelector('select[name="year"]');
+            if (student.course && dropdownData[student.course]) {
+                const courseData = dropdownData[student.course];
+                batchSelect.innerHTML = '<option value="">Select Batch</option>';
+                courseData.batches.forEach(batch => {
+                    const option = document.createElement('option');
+                    option.value = batch;
+                    option.textContent = batch;
+                    if (batch === student.batch) option.selected = true;
+                    batchSelect.appendChild(option);
+                });
+                yearSelect.innerHTML = '<option value="">Select Year</option>';
+                courseData.years.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    if (year === student.year) option.selected = true;
+                    yearSelect.appendChild(option);
+                });
+            }
+            editId = id;
+            formTitle.textContent = 'Edit Student';
+            submitBtn.textContent = 'Update';
+            document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Student not found for editing. It might have been deleted or an error occurred.');
+        }
+    };
 
-window.clearExcelImports = function() {
-if (confirm('This will remove ALL Excel-imported students. Are you sure?')) {
-const stored = localStorage.getItem('students');
-if (stored) {
-try {
-const allStudents = JSON.parse(stored);
-const nonExcelStudents = allStudents.filter(s => !s.id || !s.id.includes('excel_'));
-localStorage.setItem('students', JSON.stringify(nonExcelStudents));
-console.log('Cleared all Excel imports. Remaining students:', nonExcelStudents.length);
-load();
-alert('All Excel imports have been cleared.');
-} catch (e) {
-console.error('Error clearing Excel imports:', e);
-}
-}
-}
-};
+    // 3. Simplify deleteStudent()
+    window.deleteStudent = async function(id) {
+        if (!confirm('Delete student?')) return;
+        console.log('=== DELETE OPERATION START ===');
+        console.log('Attempting to delete student with ID:', id);
 
-window.showExcelImports = function() {
-const stored = localStorage.getItem('students');
-if (stored) {
-try {
-const allStudents = JSON.parse(stored);
-const excelStudents = allStudents.filter(s => s.id && s.id.includes('excel_'));
-console.log('Excel imports in localStorage:', excelStudents);
-console.table(excelStudents.map(s => ({id: s.id, name: s.name, phone: s.number})));
-} catch (e) {
-console.error('Error reading Excel imports:', e);
-}
-}
-};
+        try {
+            // --- MODIFIED CODE START (Direct API call) ---
+            console.log('Attempting to delete by ID via API');
+            const response = await fetch(`/api/students/${id}`, { method: 'DELETE' });
+            
+            if (response.ok) {
+                console.log('✅ Student deleted successfully from database by ID');
+                alert('Student deleted successfully!');
+            } else {
+                const errorText = await response.text();
+                console.error(`❌ API delete by ID failed with status: ${response.status} - ${errorText}`);
+                throw new Error(`Failed to delete student: ${response.status} - ${errorText}`); // Throw to catch below
+            }
+            // --- MODIFIED CODE END ---
+        } catch (error) {
+            console.error('❌ Delete operation error:', error.message);
+            // --- MODIFIED CODE START (Simplified error alert) ---
+            alert('Failed to delete student. Please check console for details and ensure the API is running.');
+            // --- MODIFIED CODE END ---
+        }
+        
+        console.log('=== DELETE OPERATION END ===');
+        load(); // Always reload to reflect changes from the API
+    };
 
-load();
+    // 2. Centralize Duplicate Check in form.addEventListener('submit')
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form));
+
+        try {
+            const method = editId ? 'PUT' : 'POST';
+            const url = editId ? `/api/students/${editId}` : '/api/students';
+            const response = await fetch(url, { 
+                method, 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(data) 
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                // Handle specific backend duplicate error messages if needed
+                if (errorText.includes('already exists') || errorText.includes('duplicate')) {
+                    alert(`A student with phone number ${data.number} already exists in the database.`);
+                    return; // Stop execution if it's a duplicate
+                }
+                throw new Error(`API submission failed: ${response.status} - ${errorText}`);
+            }
+
+            // --- MODIFIED CODE START (Success message) ---
+            alert(`Student ${editId ? 'updated' : 'added'} successfully!`);
+            // --- MODIFIED CODE END ---
+
+        } catch (error) {
+            console.error('API submission failed:', error); // Use error instead of warn
+            // --- MODIFIED CODE START (Simplified API submission error handling) ---
+            alert('Failed to save student to the database. Please check console for details and ensure the API is running.');
+            // --- MODIFIED CODE END ---
+        }
+        resetForm(); 
+        load();
+    });
+
+    const headerMap = {
+        "phone": "number",
+        "name": "name",
+        "course": "course",
+        "batch": "batch",
+        "year": "year",
+        "branch": "branch",
+        "admission year": "admissionYear",
+        "pending fees": "pendingFees",
+        "role": "Role",
+        "faculty": "Faculty",
+        "password": "password"
+    };
+
+    // 4. Crucial: Send Bulk Imports to API
+    importExcelBtn.addEventListener('click', () => {
+        const file = bulkImportExcelFile.files[0];
+        if (!file) {
+            alert('Please select an Excel or CSV file to import.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                let importedData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+                if (importedData.length < 2) {
+                    alert('No data found in the selected sheet beyond headers.');
+                    return;
+                }
+                const headers = importedData[0];
+                const rows = importedData.slice(1);
+                let parsedStudents = [];
+                for (const row of rows) {
+                    let student = {};
+                    let isValidRow = true; // No longer skipping row based on required fields for a single import. The backend will validate.
+                    for (let i = 0; i < headers.length; i++) {
+                        const excelHeaderRaw = headers[i];
+                        if (excelHeaderRaw === null || excelHeaderRaw === undefined || String(excelHeaderRaw).trim() === '') {
+                            continue;
+                        }
+                        const excelHeaderNormalized = String(excelHeaderRaw).trim().toLowerCase();
+                        const jsKey = headerMap[excelHeaderNormalized];
+                        if (jsKey) {
+                            let value = row[i];
+                            if (jsKey === 'number') {
+                                value = String(value || '').trim();
+                            }
+                            if (jsKey === 'pendingFees') {
+                                value = String(value || '').replace(/[^\d.-]/g, '').trim(); 
+                            }
+                            if (jsKey === 'password') {
+                                value = String(value || 'default123').trim();
+                            }
+                            student[jsKey] = value;
+                        }
+                    }
+                    // --- MODIFIED CODE START ---
+                    // Add basic validation for required fields before sending to API
+                    if (!student.number || !student.name || !student.course || !student.password) {
+                        console.warn(`Skipping row due to missing required fields (Phone, Name, Course, Password):`, student);
+                        continue; // Skip invalid rows
+                    }
+                    // --- MODIFIED CODE END ---
+                    parsedStudents.push(student);
+                }
+                
+                // --- MODIFIED CODE START ---
+                const totalRowsToImport = parsedStudents.length;
+                let successfulImports = 0;
+                let failedImports = 0;
+                let duplicatesSkipped = 0;
+
+                if (totalRowsToImport === 0) {
+                    alert('No valid student data found in the Excel file after parsing.');
+                    return;
+                }
+
+                // Loop through each parsed student and send to API
+                for (const studentData of parsedStudents) {
+                    try {
+                        const response = await fetch('/api/students', { // Assuming POST to /api/students for new student
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(studentData)
+                        });
+
+                        if (response.ok) {
+                            successfulImports++;
+                        } else {
+                            const errorText = await response.text();
+                            if (errorText.includes('already exists') || errorText.includes('duplicate')) {
+                                duplicatesSkipped++;
+                                console.warn(`Skipping duplicate during import: ${studentData.number} - ${errorText}`);
+                            } else {
+                                failedImports++;
+                                console.error(`Failed to import student ${studentData.number}: ${response.status} - ${errorText}`);
+                            }
+                        }
+                    } catch (error) {
+                        failedImports++;
+                        console.error(`Network error during import of student ${studentData.number}:`, error);
+                    }
+                }
+                
+                alert(`Bulk Import Complete!\nSuccessful: ${successfulImports}\nDuplicates Skipped: ${duplicatesSkipped}\nFailed: ${failedImports}`);
+                bulkImportExcelFile.value = ''; // Clear the file input
+                load(); // Reload the list to show newly imported students
+                // --- MODIFIED CODE END ---
+
+            } catch (err) {
+                console.error('Error during Excel import:', err);
+                alert('Error processing Excel file. Please ensure it\'s a valid format and check console for details.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // Initial load when the page first loads
+    load();
 </script>
 </body>
 </html>

@@ -122,9 +122,36 @@
                 </select>
                 <select id="courseFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
                     <option value="all">All Courses</option>
+                    <option value="D.Pharm">D.Pharm</option>
+                    <option value="B.Pharm">B.Pharm</option>
+                    <option value="GNM">GNM</option>
                 </select>
                 <select id="facultyFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
                     <option value="all">All Faculty</option>
+                    <option value="Srishti Rajesh Pohuja mam">Srishti Rajesh Pohuja mam</option>
+                    <option value="Rubina Khan mam">Rubina Khan mam</option>
+                    <option value="Abhishekh Prajapati Sir">Abhishekh Prajapati Sir</option>
+                    <option value="Ankit Khedekar Sir">Ankit Khedekar Sir</option>
+                    <option value="Akashdeep Udmale Sir">Akashdeep Udmale Sir</option>
+                    <option value="Kuldeep Prajapati sir">Kuldeep Prajapati sir</option>
+                    <option value="Priya Vijay Gholap mam">Priya Vijay Gholap mam</option>
+                    <option value="Amit Agrawal sir">Amit Agrawal sir</option>
+                    <option value="Rashmi Ghuge mam">Rashmi Ghuge mam</option>
+                    <option value="Deepika Gill mam">Deepika Gill mam</option>
+                    <option value="Shalaka Regan Fernandes mam">Shalaka Regan Fernandes mam</option>
+                    <option value="Dr. Ruhi Solkar mam">Dr. Ruhi Solkar mam</option>
+                    <option value="Jitesh Choudhary sir">Jitesh Choudhary sir</option>
+                    <option value="Rachana Chauhan mam">Rachana Chauhan mam</option>
+                    <option value="Pooja Ghuge mam">Pooja Ghuge mam</option>
+                    <option value="Shraddha Agrawal mam">Shraddha Agrawal mam</option>
+                    <option value="Rajesh sir">Rajesh sir</option>
+                    <option value="Ravish Sir">Ravish Sir</option>
+                    <option value="ajay">ajay</option>
+                    <option value="Naresh Basude">Naresh Basude</option>
+                    <option value="Zara Mam">Zara Mam</option>
+                    <option value="Suryansh Sir">Suryansh Sir</option>
+                    <option value="Sneha durge mam">Sneha durge mam</option>
+                    <option value="Dr Utpala mam">Dr Utpala mam</option>
                 </select>
                 <select id="modeFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
                     <option value="all">All Modes</option>
@@ -149,6 +176,15 @@
         </section>
 
         <section class="bg-white rounded-xl shadow overflow-x-auto">
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Lectures</h3>
+                    <div class="flex gap-2">
+                        <button id="loadMoreBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition" style="display: none;">Load More</button>
+                        <span id="loadingIndicator" class="text-sm text-gray-500" style="display: none;">Loading...</span>
+                    </div>
+                </div>
+            </div>
             <table id="list" class="w-full text-sm text-left">
                 <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider">
                     <tr>
@@ -160,7 +196,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100" id="listBody">
-                    </tbody>
+                </tbody>
             </table>
         </section>
     </main>
@@ -171,6 +207,8 @@
         const formTitle     = document.getElementById('formTitle');
         const submitBtn     = document.getElementById('submitBtn');
         const cancelBtn     = document.getElementById('cancelBtn');
+        const loadMoreBtn   = document.getElementById('loadMoreBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
         
         // Filter elements
         const dateFilter = document.getElementById('dateFilter');
@@ -186,8 +224,11 @@
         
         let editId = null;
         let allLectures = [];
+        let lastVisible = null;
+        let hasMore = false;
+        let isLoading = false;
 
-        // Dropdown data structure - Updated with correct data
+        // Dropdown data structure
         const dropdownData = {
             batches: {
                 'D.Pharm': ['D- Batch D.Pharm', 'E- Batch D.Pharm', 'F- Batch D.Pharm'],
@@ -228,7 +269,7 @@
             options.forEach(option => {
                 selectElement.innerHTML += `<option value="${option}">${option}</option>`;
             });
-            selectElement.disabled = false; // Make sure to enable the dropdown
+            selectElement.disabled = false;
         }
 
         function resetDropdown(selectElement, placeholder = 'Select Option') {
@@ -238,53 +279,40 @@
 
         function handleCourseChange() {
             const selectedCourse = courseSelect.value;
-            console.log('Course selected:', selectedCourse);
             
             if (selectedCourse) {
-                // Enable and populate batch dropdown
                 const batches = dropdownData.batches[selectedCourse];
                 if (batches) {
                     populateDropdown(batchSelect, batches, 'Select Batch');
-                    console.log('Batches populated:', batches);
                 } else {
-                    resetDropdown(batchSelect, 'Select Batch'); // No batches for this course
+                    resetDropdown(batchSelect, 'Select Batch');
                 }
                 
-                // Enable and populate year dropdown
                 const years = dropdownData.years[selectedCourse];
                 if (years) {
                     populateDropdown(yearSelect, years, 'Select Year/Semester');
-                    console.log('Years populated:', years);
                 } else {
-                    resetDropdown(yearSelect, 'Select Year/Semester'); // No years for this course
+                    resetDropdown(yearSelect, 'Select Year/Semester');
                 }
                 
-                // Reset subject dropdown - it needs both course AND year selection
                 resetDropdown(subjectSelect, 'Select Subject');
-                console.log('Subject dropdown reset - waiting for year selection');
             } else {
-                // Reset all dependent dropdowns
                 resetDropdown(batchSelect, 'Select Batch');
                 resetDropdown(yearSelect, 'Select Year/Semester');
                 resetDropdown(subjectSelect, 'Select Subject');
-                console.log('All dropdowns reset');
             }
         }
 
         function handleYearChange() {
             const selectedCourse = courseSelect.value;
             const selectedYear = yearSelect.value;
-            console.log('Year selected:', selectedYear, 'for course:', selectedCourse); // Debug log
             
             if (selectedCourse && selectedYear) {
-                // Enable and populate subject dropdown
                 const subjects = dropdownData.subjects[selectedCourse] && dropdownData.subjects[selectedCourse][selectedYear];
                 if (subjects) {
                     populateDropdown(subjectSelect, subjects, 'Select Subject');
-                    console.log('Subjects populated:', subjects); // Debug log
                 } else {
                     resetDropdown(subjectSelect, 'Select Subject');
-                    console.log('No subjects found for', selectedCourse, selectedYear); // Debug log
                 }
             } else {
                 resetDropdown(subjectSelect, 'Select Subject');
@@ -295,7 +323,7 @@
         courseSelect.addEventListener('change', handleCourseChange);
         yearSelect.addEventListener('change', handleYearChange);
 
-        // Helper functions for date comparison
+        // Helper functions
         function getToday() {
             return new Date().toISOString().split('T')[0];
         }
@@ -303,32 +331,28 @@
         function getLectureRowClass(lectureDate) {
             const today = getToday();
             if (lectureDate === today) {
-                return 'bg-green-50 border-l-4 border-green-500'; // Today's lectures
+                return 'bg-green-50 border-l-4 border-green-500';
             } else if (lectureDate < today) {
-                return 'bg-gray-50 border-l-4 border-gray-400'; // Previous lectures
+                return 'bg-gray-50 border-l-4 border-gray-400';
             } else {
-                return 'bg-orange-50 border-l-4 border-orange-500'; // Upcoming lectures
+                return 'bg-orange-50 border-l-4 border-orange-500';
             }
         }
 
         function sortLecturesByDate(lectures) {
             const today = getToday();
             return lectures.sort((a, b) => {
-                // Today's lectures first
                 if (a.date === today && b.date !== today) return -1;
                 if (b.date === today && a.date !== today) return 1;
                 
-                // Then upcoming lectures (sorted by date ascending)
                 if (a.date > today && b.date > today) {
                     return new Date(a.date) - new Date(b.date);
                 }
                 
-                // Then previous lectures (sorted by date descending)
                 if (a.date < today && b.date < today) {
                     return new Date(b.date) - new Date(a.date);
                 }
                 
-                // Upcoming before previous
                 if (a.date > today && b.date < today) return -1;
                 if (b.date > today && a.date < today) return 1;
                 
@@ -336,44 +360,133 @@
             });
         }
 
-        function populateFilterOptions(lectures) {
-            // Populate course filter
-            const courses = [...new Set(lectures.map(l => l.course))].sort();
-            courseFilter.innerHTML = '<option value="all">All Courses</option>' + 
-                courses.map(course => `<option value="${course}">${course}</option>`).join('');
+        function buildApiUrl(isLoadMore = false) {
+            const params = new URLSearchParams();
             
-            // Populate faculty filter
-            const faculties = [...new Set(lectures.map(l => l.faculty))].sort();
-            facultyFilter.innerHTML = '<option value="all">All Faculty</option>' + 
-                faculties.map(faculty => `<option value="${faculty}">${faculty}</option>`).join('');
+            // Add filters
+            if (dateFilter.value !== 'all') {
+                params.append('dateFilter', dateFilter.value);
+            }
+            if (courseFilter.value !== 'all') {
+                params.append('course', courseFilter.value);
+            }
+            if (facultyFilter.value !== 'all') {
+                params.append('faculty', facultyFilter.value);
+            }
+            if (modeFilter.value !== 'all') {
+                params.append('mode', modeFilter.value);
+            }
+            
+            // Add pagination
+            params.append('limit', '30');
+            if (isLoadMore && lastVisible) {
+                params.append('startAfter', lastVisible);
+            }
+            
+            return '/api/lectures?' + params.toString();
         }
 
-        function filterLectures() {
-            const dateFilterValue = dateFilter.value;
-            const courseFilterValue = courseFilter.value;
-            const facultyFilterValue = facultyFilter.value;
-            const modeFilterValue = modeFilter.value;
-            const today = getToday();
+        // Main function to load lectures from API with backend filtering
+        async function loadLecturesAndDisplay(isLoadMore = false) {
+            if (isLoading) return;
+            
+            console.log('=== LOAD LECTURES FUNCTION START ===');
+            isLoading = true;
+            loadingIndicator.style.display = 'inline';
+            
+            // Sample data for fallback
+            const sampleLectures = [
+                {
+                    id: '1',
+                    course: 'D.Pharm',
+                    batch: 'D- Batch D.Pharm',
+                    branch: 'Nalasopara',
+                    year: '1st Year',
+                    subject: 'Pharmaceutics',
+                    faculty: 'Srishti Rajesh Pohuja mam',
+                    date: getToday(),
+                    start: '10:00',
+                    end: '12:00',
+                    mode: 'Online',
+                    link: 'https://meet.google.com/abc-123',
+                    location: ''
+                },
+                {
+                    id: '2',
+                    course: 'B.Pharm',
+                    batch: '24-25 B.Pharm',
+                    branch: 'Bhayandar',
+                    year: 'sem 2',
+                    subject: 'Pharmaceutical Organic Chemistry I (BP202T)',
+                    faculty: 'Rubina Khan mam',
+                    date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0],
+                    start: '14:00',
+                    end: '16:00',
+                    mode: 'Offline',
+                    link: '',
+                    location: 'Room 101'
+                },
+                {
+                    id: '3',
+                    course: 'GNM',
+                    batch: 'E- Batch Gnm',
+                    branch: 'Malad',
+                    year: '2nd Year',
+                    subject: 'Foundation of nursing',
+                    faculty: 'Abhishekh Prajapati Sir',
+                    date: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0],
+                    start: '09:00',
+                    end: '11:00',
+                    mode: 'Online',
+                    link: 'https://meet.google.com/xyz-789',
+                    location: ''
+                }
+            ];
 
-            let filteredLectures = allLectures.filter(lecture => {
-                // Date filter
-                if (dateFilterValue === 'today' && lecture.date !== today) return false;
-                if (dateFilterValue === 'previous' && lecture.date >= today) return false;
-                if (dateFilterValue === 'upcoming' && lecture.date <= today) return false;
-                
-                // Course filter
-                if (courseFilterValue !== 'all' && lecture.course !== courseFilterValue) return false;
-                
-                // Faculty filter
-                if (facultyFilterValue !== 'all' && lecture.faculty !== facultyFilterValue) return false;
-                
-                // Mode filter
-                if (modeFilterValue !== 'all' && (lecture.mode || '').toLowerCase() !== modeFilterValue) return false;
-                
-                return true;
-            });
+            try {
+                const response = await fetch(buildApiUrl(isLoadMore));
+                if (response.ok) {
+                    const data = await response.json();
+                    const lectures = data.lectures || [];
+                    
+                    if (isLoadMore) {
+                        // Append to existing lectures
+                        allLectures = [...allLectures, ...lectures];
+                    } else {
+                        // Replace lectures
+                        allLectures = lectures.length > 0 ? lectures : sampleLectures;
+                    }
+                    
+                    lastVisible = data.lastVisible;
+                    hasMore = data.hasMore;
+                    
+                    console.log('Loaded lectures from API:', lectures.length);
+                    console.log('Total lectures:', allLectures.length);
+                    console.log('Has more:', hasMore);
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Failed to load lectures from API: ${response.status} - ${errorText}`);
+                    if (!isLoadMore) {
+                        allLectures = sampleLectures;
+                        alert('Failed to load lectures from the server. Using sample data. Please try again later.');
+                    }
+                }
+            } catch (error) {
+                console.error('Network error during API load:', error);
+                if (!isLoadMore) {
+                    allLectures = sampleLectures;
+                    alert('Could not connect to the server to load lectures. Using sample data. Please check your network connection.');
+                }
+            }
 
-            displayLectures(filteredLectures);
+            isLoading = false;
+            loadingIndicator.style.display = 'none';
+            
+            // Update UI
+            displayLectures(allLectures);
+            updateLoadMoreButton();
+            
+            console.log('=== LOAD LECTURES FUNCTION END ===');
         }
 
         function displayLectures(lectures) {
@@ -412,13 +525,20 @@
                 : `<tr><td colspan="13" class="text-center py-8 text-slate-500">No lectures found. ${dateFilter.value !== 'all' ? 'Try changing the filter or ' : ''}Add one above!</td></tr>`;
         }
 
+        function updateLoadMoreButton() {
+            if (hasMore && !isLoading) {
+                loadMoreBtn.style.display = 'inline-block';
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
+        }
+
         function resetForm() {
             form.reset(); 
             editId = null;
             formTitle.textContent = 'Add Lecture';
             submitBtn.textContent = 'Save';
             
-            // Reset all dropdowns to initial state
             resetDropdown(batchSelect, 'Select Batch');
             resetDropdown(yearSelect, 'Select Year/Semester');
             resetDropdown(subjectSelect, 'Select Subject');
@@ -426,204 +546,140 @@
 
         cancelBtn.addEventListener('click', resetForm);
 
-        // This function was duplicated, consolidating and making it more robust
-        async function loadLecturesAndDisplay() {
-            // Get today's date for demonstration
-            const today = getToday();
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            // Initialize with updated sample data
-            const sampleLectures = [
-                {
-                    id: '1',
-                    course: 'D.Pharm',
-                    batch: 'D- Batch D.Pharm',
-                    branch: 'Nalasopara',
-                    year: '1st Year',
-                    subject: 'Pharmaceutics',
-                    faculty: 'Srishti Rajesh Pohuja mam',
-                    date: today,
-                    start: '10:00',
-                    end: '12:00',
-                    mode: 'Online',
-                    link: 'https://meet.google.com/abc-123',
-                    location: ''
-                },
-                {
-                    id: '2',
-                    course: 'B.Pharm',
-                    batch: '24-25 B.Pharm',
-                    branch: 'Bhayandar',
-                    year: 'sem 2',
-                    subject: 'Pharmaceutical Organic Chemistry I (BP202T)',
-                    faculty: 'Rubina Khan mam',
-                    date: yesterday.toISOString().split('T')[0],
-                    start: '14:00',
-                    end: '16:00',
-                    mode: 'Offline',
-                    link: '',
-                    location: 'Room 101'
-                },
-                {
-                    id: '3',
-                    course: 'GNM',
-                    batch: 'E- Batch Gnm',
-                    branch: 'Malad',
-                    year: '2nd Year',
-                    subject: 'Foundation of nursing',
-                    faculty: 'Abhishekh Prajapati Sir',
-                    date: tomorrow.toISOString().split('T')[0],
-                    start: '09:00',
-                    end: '11:00',
-                    mode: 'Online',
-                    link: 'https://meet.google.com/xyz-789',
-                    location: ''
-                },
-                {
-                    id: '4',
-                    course: 'B.Pharm',
-                    batch: '25-26 B.Pharm',
-                    branch: 'Thane',
-                    year: 'sem 5',
-                    subject: 'Medicinal Chemistry II (BP501T)',
-                    faculty: 'Ankit Khedekar Sir',
-                    date: '2024-12-25',
-                    start: '11:00',
-                    end: '13:00',
-                    mode: 'Offline',
-                    link: '',
-                    location: 'Room 205'
-                }
-            ];
-
-            // Try to fetch from API first
-            try {
-                const response = await fetch('/api/lectures');
-                if (response.ok) {
-                    const data = await response.json();
-                    allLectures = data && data.length > 0 ? data : sampleLectures;
-                } else {
-                    throw new Error('API not available');
-                }
-            } catch (error) {
-                console.log('API not available, using fallback data');
-                // Fallback to local storage if API is not available
-                const stored = localStorage.getItem('lectures');
-                if (stored) {
-                    try {
-                        allLectures = JSON.parse(stored);
-                    } catch (e) {
-                        allLectures = sampleLectures;
-                    }
-                } else {
-                    allLectures = sampleLectures;
-                }
-            }
-            
-            console.log('Loaded lectures:', allLectures);
-            populateFilterOptions(allLectures);
-            displayLectures(allLectures);
-        }
-
-        window.editLecture = async function(id) { // Made global for onclick
+        // Function to edit a lecture
+        window.editLecture = async function(id) {
             let lecture;
             try {
-                lecture = await fetch(`/api/lectures/${id}`).then(r => r.json());
+                const response = await fetch(`/api/lectures/${id}`);
+                if (response.ok) {
+                    lecture = await response.json();
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Failed to fetch lecture for edit: ${response.status} - ${errorText}`);
+                    alert('Failed to retrieve lecture details for editing. Please check server connection.');
+                    return;
+                }
             } catch (error) {
-                // Fallback to local data
-                lecture = allLectures.find(l => l.id === id);
+                console.error('Network error fetching lecture for edit:', error);
+                alert('Could not connect to the server to retrieve lecture details for editing. Please check your network.');
+                return;
             }
-            
+
             if (lecture) {
                 // Set course first to trigger cascading
                 courseSelect.value = lecture.course || '';
-                handleCourseChange(); // This populates batch and year
+                handleCourseChange();
 
-                // Use a short delay to ensure batch and year dropdowns are populated
                 setTimeout(() => {
                     batchSelect.value = lecture.batch || '';
                     yearSelect.value = lecture.year || '';
-                    
-                    handleYearChange(); // This populates subject
 
-                    // Use another short delay to ensure subject dropdown is populated
+                    handleYearChange();
+
                     setTimeout(() => {
                         subjectSelect.value = lecture.subject || '';
-                        
+
                         // Set all other form fields
                         Object.keys(lecture).forEach(k => {
                             if (form[k] && !['course', 'batch', 'year', 'subject'].includes(k)) {
                                 form[k].value = lecture[k];
                             }
                         });
-                    }, 50); // Small delay for subject
-                }, 50); // Small delay for batch and year
-                
+                    }, 50);
+                }, 50);
+
                 editId = id;
                 formTitle.textContent = 'Edit Lecture';
                 submitBtn.textContent = 'Update';
                 document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert('Lecture not found for editing. It might have been deleted or an error occurred.');
             }
-        }
+        };
 
-        window.deleteLecture = async function(id) { // Made global for onclick
+        // Function to delete a lecture
+        window.deleteLecture = async function(id) {
             if (!confirm('Delete lecture?')) return;
-            
-            try {
-                await fetch(`/api/lectures/${id}`, { method: 'DELETE' });
-            } catch (error) {
-                // Fallback to local storage
-                allLectures = allLectures.filter(l => l.id !== id);
-                localStorage.setItem('lectures', JSON.stringify(allLectures));
-            }
-            
-            loadLecturesAndDisplay();
-        }
+            console.log('Attempting to delete lecture with ID:', id);
 
+            try {
+                const response = await fetch(`/api/lectures/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    console.log('✅ Lecture deleted successfully from database.');
+                    alert('Lecture deleted successfully!');
+                } else {
+                    const errorText = await response.text();
+                    console.error(`❌ API delete failed with status: ${response.status} - ${errorText}`);
+                    alert('Failed to delete lecture from the server. Please check console for details.');
+                }
+            } catch (error) {
+                console.error('❌ Network error during delete operation:', error);
+                alert('Could not connect to the server to delete lecture. Please check your network connection.');
+            }
+
+            // Reset pagination and reload
+            resetPagination();
+            loadLecturesAndDisplay();
+        };
+
+        // Form submission handler
         form.addEventListener('submit', async e => {
             e.preventDefault();
             const data = Object.fromEntries(new FormData(form));
-            
+
             try {
                 const method = editId ? 'PUT' : 'POST';
                 const url = editId ? `/api/lectures/${editId}` : '/api/lectures';
-                await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-            } catch (error) {
-                // Fallback to local storage
-                if (editId) {
-                    const index = allLectures.findIndex(l => l.id === editId);
-                    if (index !== -1) {
-                        allLectures[index] = { ...data, id: editId };
-                    }
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alert(`Lecture ${editId ? 'updated' : 'added'} successfully!`);
                 } else {
-                    const newLecture = { ...data, id: Date.now().toString() };
-                    allLectures.push(newLecture);
+                    const errorText = await response.text();
+                    console.error(`API submission failed: ${response.status} - ${errorText}`);
+                    alert(`Failed to save lecture to the database. ${errorText || ''}. Please check console for details.`);
                 }
-                localStorage.setItem('lectures', JSON.stringify(allLectures));
+            } catch (error) {
+                console.error('Network error during API submission:', error);
+                alert('Could not connect to the server to save lecture. Please check your network connection and ensure the API is running.');
             }
-            
-            resetForm(); 
+
+            resetForm();
+            // Reset pagination and reload
+            resetPagination();
             loadLecturesAndDisplay();
         });
 
+        // Reset pagination state
+        function resetPagination() {
+            lastVisible = null;
+            hasMore = false;
+            allLectures = [];
+        }
+
+        // Filter change handlers
+        function handleFilterChange() {
+            resetPagination();
+            loadLecturesAndDisplay();
+        }
+
+        // Load more button handler
+        loadMoreBtn.addEventListener('click', () => {
+            loadLecturesAndDisplay(true);
+        });
+
         // Add event listeners for filters
-        dateFilter.addEventListener('change', filterLectures);
-        courseFilter.addEventListener('change', filterLectures);
-        facultyFilter.addEventListener('change', filterLectures);
-        modeFilter.addEventListener('change', filterLectures);
+        dateFilter.addEventListener('change', handleFilterChange);
+        courseFilter.addEventListener('change', handleFilterChange);
+        facultyFilter.addEventListener('change', handleFilterChange);
+        modeFilter.addEventListener('change', handleFilterChange);
 
         // Initialize page
         loadLecturesAndDisplay();
-        
-        // Test dropdown functionality on page load
-        console.log('Page loaded, testing dropdowns...');
-        console.log('Course dropdown:', courseSelect);
-        console.log('Batch dropdown disabled:', batchSelect.disabled);
-        console.log('Year dropdown disabled:', yearSelect.disabled);
-        console.log('Subject dropdown disabled:', subjectSelect.disabled);
     </script>
 </body>
 </html>
