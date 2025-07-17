@@ -26,6 +26,12 @@ const db = admin.firestore();
 
 /*────────────── Build Express app */
 const app = express();
+/* ─────── Password lock (add just below const app = express(); ) ─────── */
+const basicAuth = require('express-basic-auth');
+app.use(basicAuth({
+  users: { admin: process.env.SITE_PASSWORD }, // 1 shared user / pass
+  challenge: true                              // browser pop-up
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));      // serves your HTML/CSS/JS
