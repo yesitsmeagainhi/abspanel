@@ -1,528 +1,301 @@
+<!-- public/students.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Students CRUD</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-<script>
-  window.USE_DEMO = false; // Set to false to use live API
-</script>
+  <meta charset="UTF-8" />
+  <title>Students CRUD</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
+
 <body class="bg-slate-50 text-slate-800 font-sans">
-<nav class="bg-white shadow sticky top-0 z-20">
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-<div class="flex items-center justify-between h-16">
-<span class="text-xl font-bold text-indigo-600">Dashboard</span>
-<div class="space-x-2 sm:space-x-4 text-sm font-medium">
-<a href="/" class="hover:text-indigo-600 transition">Home</a>
-<a href="lectures.html" class="hover:text-indigo-600 transition">Lectures</a>
-<a href="students.html" class="text-indigo-600">Students</a>
-<a href="announcements.html" class="hover:text-indigo-600 transition">Announcements</a>
-<a href="banners.html" class="hover:text-indigo-600 transition">Banners</a>
-</div>
-</div>
-</div>
-</nav>
-<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-<section id="formSection" class="bg-white rounded-xl shadow p-6 mb-8">
-<h2 id="formTitle" class="text-xl font-semibold mb-4">Add Student</h2>
-<form id="form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-<input name="number" placeholder="Phone Number" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<input name="password" placeholder="Password" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<input name="name" placeholder="Name" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<select name="course" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<option value="">Select Course</option>
-<option value="D.Pharm">D.Pharm</option>
-<option value="B.Pharm">B.Pharm</option>
-<option value="GNM">GNM</option>
-</select>
-<select name="batch" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<option value="">Select Batch</option>
-</select>
-<select name="year" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<option value="">Select Year</option>
-</select>
-<select name="branch" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<option value="">Select Branch</option>
-<option value="Nalasopara">Nalasopara</option>
-<option value="Bhayandar">Bhayandar</option>
-<option value="Malad">Malad</option>
-<option value="Thane">Thane</option>
-<option value="Andheri">Andheri</option>
-<option value="Kurla">Kurla</option>
-</select>
-<input name="admissionYear" placeholder="Admission Year" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<input name="pendingFees" placeholder="Pending Fees" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<select name="Role" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<option value="">Select Role</option>
-<option value="Student">Student</option>
-<option value="Faculty">Faculty</option>
-<option value="Admin">Admin</option>
-</select>
-<input name="Faculty" placeholder="Faculty" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-<div class="sm:col-span-2 lg:col-span-3 flex gap-2">
-<button type="submit" id="submitBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition">Save</button>
-<button type="button" id="cancelBtn" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 transition">Cancel</button>
-</div>
-</form>
-</section>
-<section class="bg-white rounded-xl shadow p-6 mb-8">
-<h2 class="text-xl font-semibold mb-4">Bulk Import Students (Excel/CSV)</h2>
-<div class="flex flex-col sm:flex-row items-center gap-4">
-<input type="file" id="bulkImportExcelFile" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
-<button type="button" id="importExcelBtn" class="px-4 py-2 bg-green-600 text-white rounded-md shadow hover:bg-green-700 transition w-full sm:w-auto">Import Excel</button>
-</div>
-<p class="text-sm text-slate-500 mt-2">
-Upload an Excel (.xlsx, .xls) or CSV file. Ensure the first row contains headers:
-`Phone, Name, Course, Batch, Year, Branch, Admission Year, Pending Fees, Role, Faculty, Password`.
-</p>
-</section>
-<section class="bg-white rounded-xl shadow overflow-x-auto">
-<table id="list" class="w-full text-sm text-left">
-<thead class="bg-slate-100 text-slate-700 uppercase tracking-wider">
-<tr>
-<th class="px-4 py-3">Phone</th>
-<th class="px-4 py-3">Name</th>
-<th class="px-4 py-3">Course</th>
-<th class="px-4 py-3">Batch</th>
-<th class="px-4 py-3">Year</th>
-<th class="px-4 py-3">Branch</th>
-<th class="px-4 py-3">Admission Year</th>
-<th class="px-4 py-3">Pending Fees</th>
-<th class="px-4 py-3">Role</th>
-<th class="px-4 py-3">Faculty</th>
-<th class="px-4 py-3">Actions</th>
-</tr>
-</thead>
-<tbody class="divide-y divide-slate-100" id="listBody">
-</tbody>
-</table>
-<div class="flex justify-between items-center px-4 py-3 bg-slate-100 text-sm" id="paginationControls">
-  <button id="prevPage" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Previous</button>
-  <span id="pageInfo" class="text-slate-600"></span>
-  <button id="nextPage" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Next</button>
-</div>
-</section>
-</main>
-<script>
-    const form = document.getElementById('form');
-    const list = document.getElementById('list');
-    const formTitle = document.getElementById('formTitle');
-    const submitBtn = document.getElementById('submitBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const bulkImportExcelFile = document.getElementById('bulkImportExcelFile');
-    const importExcelBtn = document.getElementById('importExcelBtn');
-    let editId = null;
-    let students = [];
-    let currentPage = 1;
-    const perPage = 30;
-    let totalStudentsCount = 0;
 
-    const dropdownData = {
-        'D.Pharm': {
-            years: ['1st Year', '2nd Year'],
-            batches: ['D- Batch D.Pharm', 'E- Batch D.Pharm', 'F- Batch D.Pharm']
-        },
-        'B.Pharm': {
-            years: ['sem 1', 'sem 2', 'sem 3', 'sem 4', 'sem 5', 'sem 6', 'sem 7', 'sem 8'],
-            batches: ['24-25 B.Pharm', '25-26 B.Pharm']
-        },
-        'GNM': {
-            years: ['1st Year', '2nd Year', '3rd Year'],
-            batches: ['E- Batch Gnm', 'F- Batch Gnm']
-        }
-    };
+  <!-- ─────────────────── NAVBAR ─────────────────── -->
+  <nav class="bg-white shadow sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <span class="text-xl font-bold text-indigo-600">Dashboard</span>
+        <div class="space-x-2 sm:space-x-4 text-sm font-medium">
+          <a href="/"               class="hover:text-indigo-600">Home</a>
+          <a href="lectures.html"   class="hover:text-indigo-600">Lectures</a>
+          <a href="students.html"   class="text-indigo-600">Students</a>
+          <a href="announcements.html" class="hover:text-indigo-600">Announcements</a>
+          <a href="banners.html"    class="hover:text-indigo-600">Banners</a>
+        </div>
+      </div>
+    </div>
+  </nav>
 
-    document.querySelector('select[name="course"]').addEventListener('change', function() {
-        const selectedCourse = this.value;
-        const batchSelect = document.querySelector('select[name="batch"]');
-        const yearSelect = document.querySelector('select[name="year"]');
-        batchSelect.innerHTML = '<option value="">Select Batch</option>';
-        yearSelect.innerHTML = '<option value="">Select Year</option>';
-        if (selectedCourse && dropdownData[selectedCourse]) {
-            const courseData = dropdownData[selectedCourse];
-            courseData.batches.forEach(batch => {
-                const option = document.createElement('option');
-                option.value = batch;
-                option.textContent = batch;
-                batchSelect.appendChild(option);
-            });
-            courseData.years.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                yearSelect.appendChild(option);
-            });
-        }
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ─────────────────── FORM ─────────────────── -->
+    <section id="formSection" class="bg-white rounded-xl shadow p-6 mb-8">
+      <h2 id="formTitle" class="text-xl font-semibold mb-4">Add Student</h2>
+
+      <form id="form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <input name="number"  placeholder="Phone Number"  required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+        <input name="password"placeholder="Password"     required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+        <input name="name"    placeholder="Name"          required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+
+        <select name="course" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Select Course</option>
+          <option value="D.Pharm">D.Pharm</option>
+          <option value="B.Pharm">B.Pharm</option>
+          <option value="GNM">GNM</option>
+        </select>
+
+        <select name="batch"  required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Select Batch</option>
+        </select>
+
+        <select name="year"   required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Select Year</option>
+        </select>
+
+        <select name="branch" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Select Branch</option>
+          <option>Nalasopara</option><option>Bhayandar</option><option>Malad</option>
+          <option>Thane</option><option>Andheri</option><option>Kurla</option>
+        </select>
+
+        <input name="admissionYear" placeholder="Admission Year" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+        <input name="pendingFees"   placeholder="Pending Fees"   required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+
+        <select name="Role" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Select Role</option>
+          <option>Student</option><option>Faculty</option><option>Admin</option>
+        </select>
+
+        <input name="Faculty" placeholder="Faculty" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+
+        <div class="sm:col-span-2 lg:col-span-3 flex gap-2">
+          <button type="submit" id="submitBtn"
+                  class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700">
+            Save
+          </button>
+          <button type="button" id="cancelBtn"
+                  class="px-4 py-2 bg-slate-200 rounded-md hover:bg-slate-300">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ─────────────────── BULK IMPORT ─────────────────── -->
+    <section class="bg-white rounded-xl shadow p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4">Bulk Import Students (Excel/CSV)</h2>
+      <div class="flex flex-col sm:flex-row items-center gap-4">
+        <input type="file" id="bulkFile" accept=".csv, .xlsx, .xls"
+               class="block w-full text-sm file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
+        <button id="importBtn" class="px-4 py-2 bg-green-600 text-white rounded-md shadow hover:bg-green-700">
+          Import
+        </button>
+      </div>
+      <p class="text-sm text-slate-500 mt-2">
+        Header row must contain: Phone, Name, Course, Batch, Year, Branch, Admission Year, Pending Fees, Role, Faculty, Password
+      </p>
+    </section>
+
+    <!-- ─────────────────── TABLE ─────────────────── -->
+    <section class="bg-white rounded-xl shadow overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-slate-100 text-slate-700 uppercase">
+          <tr>
+            <th class="px-4 py-3">Phone</th><th class="px-4 py-3">Name</th><th class="px-4 py-3">Course</th>
+            <th class="px-4 py-3">Batch</th><th class="px-4 py-3">Year</th><th class="px-4 py-3">Branch</th>
+            <th class="px-4 py-3">Admission&nbsp;Year</th><th class="px-4 py-3">Pending&nbsp;Fees</th>
+            <th class="px-4 py-3">Role</th><th class="px-4 py-3">Faculty</th><th class="px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="listBody" class="divide-y divide-slate-100"></tbody>
+      </table>
+
+      <div class="flex justify-between items-center px-4 py-3 bg-slate-100 text-sm" id="pager">
+        <button id="prevBtn" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Previous</button>
+        <span id="pageInfo" class="text-slate-600"></span>
+        <button id="nextBtn" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Next</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ─────────────────── SCRIPT ─────────────────── -->
+  <script>
+  /* ---------- dropdown cascade ---------- */
+  const dropdownMap = {
+    'D.Pharm': { years:['1st Year','2nd Year'],      batches:['D- Batch D.Pharm','E- Batch D.Pharm','F- Batch D.Pharm'] },
+    'B.Pharm': { years:['sem 1','sem 2','sem 3','sem 4','sem 5','sem 6','sem 7','sem 8'],
+                 batches:['24-25 B.Pharm','25-26 B.Pharm'] },
+    'GNM':     { years:['1st Year','2nd Year','3rd Year'], batches:['E- Batch Gnm','F- Batch Gnm'] }
+  };
+  const courseSel = document.querySelector('select[name="course"]');
+  const batchSel  = document.querySelector('select[name="batch"]');
+  const yearSel   = document.querySelector('select[name="year"]');
+
+  courseSel.addEventListener('change', () => {
+    const cfg = dropdownMap[courseSel.value] || { years:[], batches:[] };
+    batchSel.innerHTML = '<option value="">Select Batch</option>' +
+      cfg.batches.map(v=>`<option>${v}</option>`).join('');
+    yearSel.innerHTML  = '<option value="">Select Year</option>' +
+      cfg.years.map(v=>`<option>${v}</option>`).join('');
+  });
+
+  /* ---------- pagination & state ---------- */
+  const perPage = 30;
+  let currentPage = 1;
+  let totalCount  = 0;
+
+  const cursors   = [null]; // startAfterId for each page (index = page-1)
+  let students    = [];     // docs of current page
+
+  /* ---------- helpers ---------- */
+  const qs = p => document.querySelector(p);
+  const render = () => {
+    const rows = students.map( (s,i) => `
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3">${s.number}</td>
+        <td class="px-4 py-3">${s.name}</td>
+        <td class="px-4 py-3">${s.course}</td>
+        <td class="px-4 py-3">${s.batch}</td>
+        <td class="px-4 py-3">${s.year}</td>
+        <td class="px-4 py-3">${s.branch}</td>
+        <td class="px-4 py-3">${s.admissionYear}</td>
+        <td class="px-4 py-3">₹${s.pendingFees}</td>
+        <td class="px-4 py-3">${s.Role}</td>
+        <td class="px-4 py-3">${s.Faculty}</td>
+        <td class="px-4 py-3">
+          <div class="flex space-x-2">
+            <button onclick="editStudent(${i})"
+                    class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Edit</button>
+            <button onclick="deleteStudent('${s.id}',${i})"
+                    class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">Delete</button>
+          </div>
+        </td>
+      </tr>`).join('');
+    qs('#listBody').innerHTML = rows || `<tr><td colspan="11" class="text-center py-8 text-slate-500">No data</td></tr>`;
+
+    const pages = Math.max(1, Math.ceil(totalCount / perPage));
+    qs('#pageInfo').textContent = `Page ${currentPage} of ${pages}`;
+    qs('#prevBtn').disabled = currentPage === 1;
+    qs('#nextBtn').disabled = currentPage >= pages;
+  };
+
+  const buildUrl = () => {
+    const params = new URLSearchParams({ limit: perPage });
+    const cursor = cursors[currentPage-1];
+    if (cursor) params.append('startAfterId', cursor);
+    return '/api/students?' + params.toString();
+  };
+
+  const loadPage = async () => {
+    const res  = await fetch(buildUrl());
+    const data = await res.json();
+
+    students   = data.students || [];
+    totalCount = data.totalStudents ?? totalCount;          // total only on first page
+    if (data.lastVisible) cursors[currentPage] = data.lastVisible;
+    render();
+  };
+
+  /* ---------- table actions ---------- */
+  window.editStudent = (idx) => {
+    const stu = students[idx];
+    const f   = qs('#form');
+    Object.entries(stu).forEach(([k,v]) => { if (f[k]) f[k].value = v; });
+    courseSel.dispatchEvent(new Event('change'));           // cascade dropdowns
+    qs('#formTitle').textContent = 'Edit Student';
+    qs('#submitBtn').textContent = 'Update';
+    f.dataset.editId = stu.id;
+    f.scrollIntoView({ behavior:'smooth' });
+  };
+
+  window.deleteStudent = async (id, idx) => {
+    if (!confirm('Delete student?')) return;
+    await fetch(`/api/students/${id}`, { method:'DELETE' });
+    students.splice(idx,1);
+    totalCount--;
+    render();
+  };
+
+  /* ---------- form submit ---------- */
+  qs('#form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    const editId = e.target.dataset.editId;
+
+    const method = editId ? 'PUT' : 'POST';
+    const url    = editId ? `/api/students/${editId}` : '/api/students';
+
+    const res = await fetch(url, {
+      method,
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
     });
+    if (!res.ok) return alert('Save failed');
 
-    function resetForm() {
-        form.reset();
-        editId = null;
-        formTitle.textContent = 'Add Student';
-        submitBtn.textContent = 'Save';
-        const batchSelect = document.querySelector('select[name="batch"]');
-        const yearSelect = document.querySelector('select[name="year"]');
-        batchSelect.innerHTML = '<option value="">Select Batch</option>';
-        yearSelect.innerHTML = '<option value="">Select Year</option>';
+    if (editId) {
+      // update in-place
+      const idx = students.findIndex(s=>s.id===editId);
+      if (idx>-1) students[idx] = { id:editId, ...data };
+    } else {
+      const { id } = await res.json();
+      if (currentPage === 1) students.unshift({ id, ...data });   // show instantly
+      totalCount++;
     }
+    resetForm();
+    render();
+  });
 
-    cancelBtn.addEventListener('click', resetForm);
+  const resetForm = () => {
+    qs('#form').reset();
+    delete qs('#form').dataset.editId;
+    qs('#formTitle').textContent = 'Add Student';
+    qs('#submitBtn').textContent = 'Save';
+    batchSel.innerHTML = '<option value="">Select Batch</option>';
+    yearSel.innerHTML  = '<option value="">Select Year</option>';
+  };
+  qs('#cancelBtn').onclick = resetForm;
 
-    // 1. Eliminate Local Storage Fallbacks in load()
-    async function load() {
-        console.log('=== LOAD FUNCTION START (Paginated) ===');
-        let apiStudents = [];
-        if (window.USE_DEMO) {
-            // KEEP this demo logic as is for client-side pagination simulation
-            try {
-                const response = await fetch('/demo/students.json');
-                if (response.ok) {
-                    let allDemoStudents = await response.json();
-                    allDemoStudents = allDemoStudents.filter(s => !s.id || !s.id.includes('excel_'));
-                    totalStudentsCount = allDemoStudents.length;
-                    const start = (currentPage - 1) * perPage;
-                    const end = start + perPage;
-                    apiStudents = allDemoStudents.slice(start, end);
-                    console.log('Loaded paginated students from DEMO:', apiStudents.length);
-                } else {
-                    throw new Error('Demo file not found');
-                }
-            } catch (err) {
-                console.warn('DEMO load failed:', err);
-            }
-        } else {
-            // --- MODIFIED CODE START ---
-            try {
-                const response = await fetch(`/api/students?page=${currentPage}&limit=${perPage}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    apiStudents = data.students || [];
-                    totalStudentsCount = data.totalStudents || 0;
-                    console.log('Loaded paginated students from API:', apiStudents.length);
-                    console.log('Total students (from API):', totalStudentsCount);
-                } else {
-                    // If API fails, DO NOT fall back to localStorage for live data
-                    console.error(`Failed to load students from API: ${response.status} - ${await response.text()}`);
-                    apiStudents = []; // Clear current page students on API failure
-                    totalStudentsCount = 0; // Reset total count
-                    alert('Failed to load students from the server. Please try again.'); // User feedback
-                }
-            } catch (err) {
-                console.error('Network error during API load:', err);
-                apiStudents = []; // Clear current page students on network error
-                totalStudentsCount = 0; // Reset total count
-                alert('Could not connect to the server. Please check your network connection and try again.'); // User feedback
-            }
-            // --- MODIFIED CODE END ---
-        }
-        students = apiStudents;
-        console.log('Final students array (current page):', students.length);
-        renderTablePage();
-        console.log('=== LOAD FUNCTION END (Paginated) ===');
-    }
+  /* ---------- pagination buttons ---------- */
+  qs('#prevBtn').onclick = () => { if (currentPage>1){ currentPage--; loadPage(); } };
+  qs('#nextBtn').onclick = () => {
+    const pages = Math.ceil(totalCount / perPage);
+    if (currentPage < pages){ currentPage++; loadPage(); }
+  };
 
-    function renderTablePage() {
-        const tbody = document.getElementById('listBody');
-        tbody.innerHTML = students.length
-            ? students.map(s => `
-                <tr class="hover:bg-slate-50">
-                  <td class="px-4 py-3">${s.number}</td>
-                  <td class="px-4 py-3">${s.name}</td>
-                  <td class="px-4 py-3">${s.course}</td>
-                  <td class="px-4 py-3">${s.batch}</td>
-                  <td class="px-4 py-3">${s.year}</td>
-                  <td class="px-4 py-3">${s.branch}</td>
-                  <td class="px-4 py-3">${s.admissionYear}</td>
-                  <td class="px-4 py-3">₹${s.pendingFees}</td>
-                  <td class="px-4 py-3">${s.Role}</td>
-                  <td class="px-4 py-3">${s.Faculty}</td>
-                  <td class="px-4 py-3">
-                    <div class="flex space-x-2">
-                      <button onclick="editStudent('${s.id}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">Edit</button>
-                      <button onclick="deleteStudent('${s.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">Delete</button>
-                    </div>
-                  </td>
-                </tr>`).join('')
-            : `<tr><td colspan="11" class="text-center py-8 text-slate-500">No students found on this page.</td></tr>`;
-        
-        // Pagination UI
-        const pageInfo = document.getElementById('pageInfo');
-        const prevBtn = document.getElementById('prevPage');
-        const nextBtn = document.getElementById('nextPage');
-        
-        const totalPages = Math.ceil(totalStudentsCount / perPage);
+  /* ---------- bulk import ---------- */
+  const headerMap = { phone:'number', name:'name', course:'course', batch:'batch',
+                      year:'year', branch:'branch', 'admission year':'admissionYear',
+                      'pending fees':'pendingFees', role:'Role', faculty:'Faculty', password:'password' };
 
-        pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
-        prevBtn.disabled = currentPage === 1;
-        nextBtn.disabled = currentPage >= totalPages;
-    }
-
-    document.getElementById('prevPage').addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            load();
-        }
-    });
-
-    document.getElementById('nextPage').addEventListener('click', () => {
-        const totalPages = Math.ceil(totalStudentsCount / perPage);
-        if (currentPage < totalPages) {
-            currentPage++;
-            load();
-        }
-    });
-
-    // 5. Simplify editStudent() Fallback
-    window.editStudent = async function(id) {
-        let student;
-        try {
-            const response = await fetch(`/api/students/${id}`);
-            if (response.ok) {
-                student = await response.json();
-            } else {
-                const errorText = await response.text();
-                console.error(`Failed to fetch student for edit: ${response.status} - ${errorText}`);
-                throw new Error('API not available for fetching student'); // Force error for consistent handling
-            }
-        } catch (error) {
-            console.error('Error fetching student for edit:', error);
-            // --- MODIFIED CODE START ---
-            // If API is down or single student fetch fails, inform user and prevent edit
-            alert('Failed to retrieve student details for editing. Please check server connection.');
-            return; // IMPORTANT: Exit function if student cannot be fetched from API
-            // --- MODIFIED CODE END ---
-        }
-
-        if (student) {
-            Object.keys(student).forEach(k => { 
-                if (form[k]) form[k].value = student[k]; 
-            });
-            const courseSelect = document.querySelector('select[name="course"]');
-            const batchSelect = document.querySelector('select[name="batch"]');
-            const yearSelect = document.querySelector('select[name="year"]');
-            if (student.course && dropdownData[student.course]) {
-                const courseData = dropdownData[student.course];
-                batchSelect.innerHTML = '<option value="">Select Batch</option>';
-                courseData.batches.forEach(batch => {
-                    const option = document.createElement('option');
-                    option.value = batch;
-                    option.textContent = batch;
-                    if (batch === student.batch) option.selected = true;
-                    batchSelect.appendChild(option);
-                });
-                yearSelect.innerHTML = '<option value="">Select Year</option>';
-                courseData.years.forEach(year => {
-                    const option = document.createElement('option');
-                    option.value = year;
-                    option.textContent = year;
-                    if (year === student.year) option.selected = true;
-                    yearSelect.appendChild(option);
-                });
-            }
-            editId = id;
-            formTitle.textContent = 'Edit Student';
-            submitBtn.textContent = 'Update';
-            document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
-        } else {
-            alert('Student not found for editing. It might have been deleted or an error occurred.');
-        }
+  qs('#importBtn').onclick = () => {
+    const file = qs('#bulkFile').files[0];
+    if (!file) return alert('Choose a file');
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const wb   = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1,raw:false});
+      const headers = rows[0].map(h=>String(h||'').toLowerCase());
+      const valid = [];
+      rows.slice(1).forEach(r=>{
+        const obj={}; headers.forEach((h,i)=>{ if(headerMap[h]) obj[headerMap[h]]=r[i]; });
+        if (obj.number && obj.name && obj.course) valid.push(obj);
+      });
+      let ok=0, fail=0;
+      for (const s of valid){
+        const resp = await fetch('/api/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
+        resp.ok ? ok++ : fail++;
+      }
+      alert(`Imported ${ok} students${fail?' — '+fail+' failed':''}`);
+      if (currentPage===1) loadPage();   // refresh first page view
     };
+    reader.readAsArrayBuffer(file);
+  };
 
-    // 3. Simplify deleteStudent()
-    window.deleteStudent = async function(id) {
-        if (!confirm('Delete student?')) return;
-        console.log('=== DELETE OPERATION START ===');
-        console.log('Attempting to delete student with ID:', id);
-
-        try {
-            // --- MODIFIED CODE START (Direct API call) ---
-            console.log('Attempting to delete by ID via API');
-            const response = await fetch(`/api/students/${id}`, { method: 'DELETE' });
-            
-            if (response.ok) {
-                console.log('✅ Student deleted successfully from database by ID');
-                alert('Student deleted successfully!');
-            } else {
-                const errorText = await response.text();
-                console.error(`❌ API delete by ID failed with status: ${response.status} - ${errorText}`);
-                throw new Error(`Failed to delete student: ${response.status} - ${errorText}`); // Throw to catch below
-            }
-            // --- MODIFIED CODE END ---
-        } catch (error) {
-            console.error('❌ Delete operation error:', error.message);
-            // --- MODIFIED CODE START (Simplified error alert) ---
-            alert('Failed to delete student. Please check console for details and ensure the API is running.');
-            // --- MODIFIED CODE END ---
-        }
-        
-        console.log('=== DELETE OPERATION END ===');
-        load(); // Always reload to reflect changes from the API
-    };
-
-    // 2. Centralize Duplicate Check in form.addEventListener('submit')
-    form.addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = Object.fromEntries(new FormData(form));
-
-        try {
-            const method = editId ? 'PUT' : 'POST';
-            const url = editId ? `/api/students/${editId}` : '/api/students';
-            const response = await fetch(url, { 
-                method, 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(data) 
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                // Handle specific backend duplicate error messages if needed
-                if (errorText.includes('already exists') || errorText.includes('duplicate')) {
-                    alert(`A student with phone number ${data.number} already exists in the database.`);
-                    return; // Stop execution if it's a duplicate
-                }
-                throw new Error(`API submission failed: ${response.status} - ${errorText}`);
-            }
-
-            // --- MODIFIED CODE START (Success message) ---
-            alert(`Student ${editId ? 'updated' : 'added'} successfully!`);
-            // --- MODIFIED CODE END ---
-
-        } catch (error) {
-            console.error('API submission failed:', error); // Use error instead of warn
-            // --- MODIFIED CODE START (Simplified API submission error handling) ---
-            alert('Failed to save student to the database. Please check console for details and ensure the API is running.');
-            // --- MODIFIED CODE END ---
-        }
-        resetForm(); 
-        load();
-    });
-
-    const headerMap = {
-        "phone": "number",
-        "name": "name",
-        "course": "course",
-        "batch": "batch",
-        "year": "year",
-        "branch": "branch",
-        "admission year": "admissionYear",
-        "pending fees": "pendingFees",
-        "role": "Role",
-        "faculty": "Faculty",
-        "password": "password"
-    };
-
-    // 4. Crucial: Send Bulk Imports to API
-    importExcelBtn.addEventListener('click', () => {
-        const file = bulkImportExcelFile.files[0];
-        if (!file) {
-            alert('Please select an Excel or CSV file to import.');
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                let importedData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-                if (importedData.length < 2) {
-                    alert('No data found in the selected sheet beyond headers.');
-                    return;
-                }
-                const headers = importedData[0];
-                const rows = importedData.slice(1);
-                let parsedStudents = [];
-                for (const row of rows) {
-                    let student = {};
-                    let isValidRow = true; // No longer skipping row based on required fields for a single import. The backend will validate.
-                    for (let i = 0; i < headers.length; i++) {
-                        const excelHeaderRaw = headers[i];
-                        if (excelHeaderRaw === null || excelHeaderRaw === undefined || String(excelHeaderRaw).trim() === '') {
-                            continue;
-                        }
-                        const excelHeaderNormalized = String(excelHeaderRaw).trim().toLowerCase();
-                        const jsKey = headerMap[excelHeaderNormalized];
-                        if (jsKey) {
-                            let value = row[i];
-                            if (jsKey === 'number') {
-                                value = String(value || '').trim();
-                            }
-                            if (jsKey === 'pendingFees') {
-                                value = String(value || '').replace(/[^\d.-]/g, '').trim(); 
-                            }
-                            if (jsKey === 'password') {
-                                value = String(value || 'default123').trim();
-                            }
-                            student[jsKey] = value;
-                        }
-                    }
-                    // --- MODIFIED CODE START ---
-                    // Add basic validation for required fields before sending to API
-                    if (!student.number || !student.name || !student.course || !student.password) {
-                        console.warn(`Skipping row due to missing required fields (Phone, Name, Course, Password):`, student);
-                        continue; // Skip invalid rows
-                    }
-                    // --- MODIFIED CODE END ---
-                    parsedStudents.push(student);
-                }
-                
-                // --- MODIFIED CODE START ---
-                const totalRowsToImport = parsedStudents.length;
-                let successfulImports = 0;
-                let failedImports = 0;
-                let duplicatesSkipped = 0;
-
-                if (totalRowsToImport === 0) {
-                    alert('No valid student data found in the Excel file after parsing.');
-                    return;
-                }
-
-                // Loop through each parsed student and send to API
-                for (const studentData of parsedStudents) {
-                    try {
-                        const response = await fetch('/api/students', { // Assuming POST to /api/students for new student
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(studentData)
-                        });
-
-                        if (response.ok) {
-                            successfulImports++;
-                        } else {
-                            const errorText = await response.text();
-                            if (errorText.includes('already exists') || errorText.includes('duplicate')) {
-                                duplicatesSkipped++;
-                                console.warn(`Skipping duplicate during import: ${studentData.number} - ${errorText}`);
-                            } else {
-                                failedImports++;
-                                console.error(`Failed to import student ${studentData.number}: ${response.status} - ${errorText}`);
-                            }
-                        }
-                    } catch (error) {
-                        failedImports++;
-                        console.error(`Network error during import of student ${studentData.number}:`, error);
-                    }
-                }
-                
-                alert(`Bulk Import Complete!\nSuccessful: ${successfulImports}\nDuplicates Skipped: ${duplicatesSkipped}\nFailed: ${failedImports}`);
-                bulkImportExcelFile.value = ''; // Clear the file input
-                load(); // Reload the list to show newly imported students
-                // --- MODIFIED CODE END ---
-
-            } catch (err) {
-                console.error('Error during Excel import:', err);
-                alert('Error processing Excel file. Please ensure it\'s a valid format and check console for details.');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    });
-
-    // Initial load when the page first loads
-    load();
-</script>
+  /* ---------- kick-off ---------- */
+  loadPage();
+  </script>
 </body>
 </html>

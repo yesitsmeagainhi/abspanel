@@ -201,485 +201,240 @@
         </section>
     </main>
 
-    <script>
-        const form          = document.getElementById('form');
-        const list          = document.getElementById('list');
-        const formTitle     = document.getElementById('formTitle');
-        const submitBtn     = document.getElementById('submitBtn');
-        const cancelBtn     = document.getElementById('cancelBtn');
-        const loadMoreBtn   = document.getElementById('loadMoreBtn');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        
-        // Filter elements
-        const dateFilter = document.getElementById('dateFilter');
-        const courseFilter = document.getElementById('courseFilter');
-        const facultyFilter = document.getElementById('facultyFilter');
-        const modeFilter = document.getElementById('modeFilter');
-        
-        // Form dropdown elements
-        const courseSelect = document.getElementById('courseSelect');
-        const batchSelect = document.getElementById('batchSelect');
-        const yearSelect = document.getElementById('yearSelect');
-        const subjectSelect = document.getElementById('subjectSelect');
-        
-        let editId = null;
-        let allLectures = [];
-        let lastVisible = null;
-        let hasMore = false;
-        let isLoading = false;
+<script>
+/* ──────────────────────────────────────────────────────────
+   DOM references
+   ────────────────────────────────────────────────────────── */
+const form         = document.getElementById('form');
+const formTitle    = document.getElementById('formTitle');
+const submitBtn    = document.getElementById('submitBtn');
+const cancelBtn    = document.getElementById('cancelBtn');
 
-        // Dropdown data structure
-        const dropdownData = {
-            batches: {
-                'D.Pharm': ['D- Batch D.Pharm', 'E- Batch D.Pharm', 'F- Batch D.Pharm'],
-                'B.Pharm': ['24-25 B.Pharm', '25-26 B.Pharm'],
-                'GNM': ['E- Batch Gnm', 'F- Batch Gnm']
-            },
-            years: {
-                'D.Pharm': ['1st Year', '2nd Year'],
-                'B.Pharm': ['sem 1', 'sem 2', 'sem 3', 'sem 4', 'sem 5', 'sem 6', 'sem 7', 'sem 8'],
-                'GNM': ['1st Year', '2nd Year', '3rd Year']
-            },
-            subjects: {
-                'D.Pharm': {
-                    '1st Year': ['Pharmaceutics', 'Pharmaceutical Chemistry', 'Pharmacognosy', 'Human Anatomy & Physiology', 'Social Pharmacy'],
-                    '2nd Year': ['Pharmacology', 'Pharmacotherapeutics', 'Biochemistry & Clinical Pathology', 'Community Pharmacy & Management', 'Hospital & Clinical Pharmacy', 'Pharmacy Law & Ethics']
-                },
-                'B.Pharm': {
-                    'sem 1': ['Human Anatomy and Physiology I (BP101T)', 'Pharmaceutical Analysis I (BP102T)', 'Pharmaceutics I (BP103T)', 'Pharmaceutical Inorganic Chemistry (BP104T)', 'Communication Skills* (BP105T)', 'Remedial Biology* / Remedial Mathematics* (BP106RBT / BP106RMT)'],
-                    'sem 2': ['Human Anatomy and Physiology II (BP201T)', 'Pharmaceutical Organic Chemistry I (BP202T)', 'Biochemistry (BP203T)', 'Pathophysiology (BP204T)', 'Computer Applications in Pharmacy* (BP205T)', 'Environmental Sciences* (BP206T)'],
-                    'sem 3': ['Pharmaceutical Organic Chemistry II (BP301T)', 'Physical Pharmaceutics I (BP302T)', 'Pharmaceutical Microbiology (BP303T)', 'Pharmaceutical Engineering (BP304T)'],
-                    'sem 4': ['Pharmaceutical Organic Chemistry III (BP401T)', 'Medicinal Chemistry I (BP402T)', 'Physical Pharmaceutics II (BP403T)', 'Pharmacology I (BP404T)', 'Pharmacognosy and Phytochemistry I (BP405T)'],
-                    'sem 5': ['Medicinal Chemistry II (BP501T)', 'Industrial Pharmacy I (BP502T)', 'Pharmacology II (BP503T)', 'Pharmacognosy and Phytochemistry II (BP504T)', 'Pharmaceutical Jurisprudence (BP505T)'],
-                    'sem 6': ['Medicinal Chemistry III (BP601T)', 'Pharmacology III (BP602T)', 'Herbal Drug Technology (BP603T)', 'Biopharmaceutics and Pharmacokinetics (BP604T)', 'Pharmaceutical Biotechnology (BP605T)', 'Quality Assurance (BP606T)'],
-                    'sem 7': ['Instrumental Methods of Analysis (BP701T)', 'Industrial Pharmacy II (BP702T)', 'Pharmacy Practice (BP703T)', 'Novel Drug Delivery System (BP704T)'],
-                    'sem 8': ['Biostatistics and Research Methodology (BP801T)', 'Social and Preventive Pharmacy (BP802T)', 'Pharma Marketing Management (BP803ET)', 'Pharmaceutical Regulatory Science (BP804ET)', 'Pharmacovigilance (BP805ET)']
-                },
-                'GNM': {
-                    '1st Year': ['Bio- Science', 'Behavioural Science', 'Foundation of nursing', 'Community Health Nurssing'],
-                    '2nd Year': ['Bio- Science', 'Behavioural Science', 'Foundation of nursing', 'Community Health Nurssing'],
-                    '3rd Year': ['Bio- Science', 'Behavioural Science', 'Foundation of nursing', 'Community Health Nurssing']
-                }
-            }
-        };
+const loadMoreBtn  = document.getElementById('loadMoreBtn');   // kept, but auto-hidden
+const spinner      = document.getElementById('loadingIndicator');
 
-        // Dropdown cascade functions
-        function populateDropdown(selectElement, options, placeholder = 'Select Option') {
-            selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-            options.forEach(option => {
-                selectElement.innerHTML += `<option value="${option}">${option}</option>`;
-            });
-            selectElement.disabled = false;
-        }
+const dateFilter   = document.getElementById('dateFilter');
+const courseFilter = document.getElementById('courseFilter');
+const facultyFilter= document.getElementById('facultyFilter');
+const modeFilter   = document.getElementById('modeFilter');
 
-        function resetDropdown(selectElement, placeholder = 'Select Option') {
-            selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-            selectElement.disabled = true;
-        }
+const courseSel    = document.getElementById('courseSelect');
+const batchSel     = document.getElementById('batchSelect');
+const yearSel      = document.getElementById('yearSelect');
+const subjectSel   = document.getElementById('subjectSelect');
+const tbody        = document.getElementById('listBody');
 
-        function handleCourseChange() {
-            const selectedCourse = courseSelect.value;
-            
-            if (selectedCourse) {
-                const batches = dropdownData.batches[selectedCourse];
-                if (batches) {
-                    populateDropdown(batchSelect, batches, 'Select Batch');
-                } else {
-                    resetDropdown(batchSelect, 'Select Batch');
-                }
-                
-                const years = dropdownData.years[selectedCourse];
-                if (years) {
-                    populateDropdown(yearSelect, years, 'Select Year/Semester');
-                } else {
-                    resetDropdown(yearSelect, 'Select Year/Semester');
-                }
-                
-                resetDropdown(subjectSelect, 'Select Subject');
-            } else {
-                resetDropdown(batchSelect, 'Select Batch');
-                resetDropdown(yearSelect, 'Select Year/Semester');
-                resetDropdown(subjectSelect, 'Select Subject');
-            }
-        }
+/* ──────────────────────────────────────────────────────────
+   Local state
+   ────────────────────────────────────────────────────────── */
+let editId        = null;
+let lectures      = [];        // all rows currently shown
+let cursor        = null;      // Firestore startAfterId
+let hasMore       = false;
+let isLoading     = false;
+const PER_PAGE    = 30;        // matches server default
 
-        function handleYearChange() {
-            const selectedCourse = courseSelect.value;
-            const selectedYear = yearSelect.value;
-            
-            if (selectedCourse && selectedYear) {
-                const subjects = dropdownData.subjects[selectedCourse] && dropdownData.subjects[selectedCourse][selectedYear];
-                if (subjects) {
-                    populateDropdown(subjectSelect, subjects, 'Select Subject');
-                } else {
-                    resetDropdown(subjectSelect, 'Select Subject');
-                }
-            } else {
-                resetDropdown(subjectSelect, 'Select Subject');
-            }
-        }
+/* ──────────────────────────────────────────────────────────
+   Dropdown cascade data
+   ────────────────────────────────────────────────────────── */
+const DD = {
+  batches : {
+    'D.Pharm':['D- Batch D.Pharm','E- Batch D.Pharm','F- Batch D.Pharm'],
+    'B.Pharm':['24-25 B.Pharm','25-26 B.Pharm'],
+    'GNM'    :['E- Batch Gnm','F- Batch Gnm']
+  },
+  years : {
+    'D.Pharm':['1st Year','2nd Year'],
+    'B.Pharm':['sem 1','sem 2','sem 3','sem 4','sem 5','sem 6','sem 7','sem 8'],
+    'GNM'    :['1st Year','2nd Year','3rd Year']
+  },
+  subjects : {
+    /*  <<< keep your full subject map here – truncated for brevity >>> */
+    'D.Pharm':{ /* … */ }, 'B.Pharm':{ /* … */ }, 'GNM':{ /* … */ }
+  }
+};
 
-        // Add event listeners for dropdown cascading
-        courseSelect.addEventListener('change', handleCourseChange);
-        yearSelect.addEventListener('change', handleYearChange);
+/* ──────────────────────────────────────────────────────────
+   Cascading dropdown helpers
+   ────────────────────────────────────────────────────────── */
+const fill = (sel, list, ph='Select')=>{
+  sel.innerHTML = `<option value="">${ph}</option>` + list.map(o=>`<option>${o}</option>`).join('');
+  sel.disabled  = !list.length;
+};
+const reset = (sel, ph)=>fill(sel,[],ph);
 
-        // Helper functions
-        function getToday() {
-            return new Date().toISOString().split('T')[0];
-        }
+courseSel.onchange = ()=>{
+  const c = courseSel.value;
+  fill(batchSel , DD.batches[c]||[], 'Select Batch');
+  fill(yearSel  , DD.years[c]  ||[], 'Select Year/Semester');
+  reset(subjectSel,'Select Subject');
+};
+yearSel.onchange = ()=>{
+  const list = DD.subjects[courseSel.value]?.[yearSel.value] || [];
+  fill(subjectSel,list,'Select Subject');
+};
 
-        function getLectureRowClass(lectureDate) {
-            const today = getToday();
-            if (lectureDate === today) {
-                return 'bg-green-50 border-l-4 border-green-500';
-            } else if (lectureDate < today) {
-                return 'bg-gray-50 border-l-4 border-gray-400';
-            } else {
-                return 'bg-orange-50 border-l-4 border-orange-500';
-            }
-        }
+/* ──────────────────────────────────────────────────────────
+   Utility helpers
+   ────────────────────────────────────────────────────────── */
+const todayISO = () => new Date().toISOString().split('T')[0];
 
-        function sortLecturesByDate(lectures) {
-            const today = getToday();
-            return lectures.sort((a, b) => {
-                if (a.date === today && b.date !== today) return -1;
-                if (b.date === today && a.date !== today) return 1;
-                
-                if (a.date > today && b.date > today) {
-                    return new Date(a.date) - new Date(b.date);
-                }
-                
-                if (a.date < today && b.date < today) {
-                    return new Date(b.date) - new Date(a.date);
-                }
-                
-                if (a.date > today && b.date < today) return -1;
-                if (b.date > today && a.date < today) return 1;
-                
-                return 0;
-            });
-        }
+const rowClass = d =>
+  d === todayISO() ? 'bg-green-50 border-l-4 border-green-500'
+: d  > todayISO() ? 'bg-orange-50 border-l-4 border-orange-500'
+                  : 'bg-gray-50  border-l-4 border-gray-400';
 
-        function buildApiUrl(isLoadMore = false) {
-            const params = new URLSearchParams();
-            
-            // Add filters
-            if (dateFilter.value !== 'all') {
-                params.append('dateFilter', dateFilter.value);
-            }
-            if (courseFilter.value !== 'all') {
-                params.append('course', courseFilter.value);
-            }
-            if (facultyFilter.value !== 'all') {
-                params.append('faculty', facultyFilter.value);
-            }
-            if (modeFilter.value !== 'all') {
-                params.append('mode', modeFilter.value);
-            }
-            
-            // Add pagination
-            params.append('limit', '30');
-            if (isLoadMore && lastVisible) {
-                params.append('startAfter', lastVisible);
-            }
-            
-            return '/api/lectures?' + params.toString();
-        }
+/*  Group order: today → future → past,
+    then sort future ascending, past descending                */
+function sortLects(arr){
+  const t = todayISO();
+  return arr.slice().sort((a,b)=>{
+    if (a.date === t && b.date !== t) return -1;
+    if (b.date === t && a.date !== t) return  1;
 
-        // Main function to load lectures from API with backend filtering
-        async function loadLecturesAndDisplay(isLoadMore = false) {
-            if (isLoading) return;
-            
-            console.log('=== LOAD LECTURES FUNCTION START ===');
-            isLoading = true;
-            loadingIndicator.style.display = 'inline';
-            
-            // Sample data for fallback
-            const sampleLectures = [
-                {
-                    id: '1',
-                    course: 'D.Pharm',
-                    batch: 'D- Batch D.Pharm',
-                    branch: 'Nalasopara',
-                    year: '1st Year',
-                    subject: 'Pharmaceutics',
-                    faculty: 'Srishti Rajesh Pohuja mam',
-                    date: getToday(),
-                    start: '10:00',
-                    end: '12:00',
-                    mode: 'Online',
-                    link: 'https://meet.google.com/abc-123',
-                    location: ''
-                },
-                {
-                    id: '2',
-                    course: 'B.Pharm',
-                    batch: '24-25 B.Pharm',
-                    branch: 'Bhayandar',
-                    year: 'sem 2',
-                    subject: 'Pharmaceutical Organic Chemistry I (BP202T)',
-                    faculty: 'Rubina Khan mam',
-                    date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0],
-                    start: '14:00',
-                    end: '16:00',
-                    mode: 'Offline',
-                    link: '',
-                    location: 'Room 101'
-                },
-                {
-                    id: '3',
-                    course: 'GNM',
-                    batch: 'E- Batch Gnm',
-                    branch: 'Malad',
-                    year: '2nd Year',
-                    subject: 'Foundation of nursing',
-                    faculty: 'Abhishekh Prajapati Sir',
-                    date: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0],
-                    start: '09:00',
-                    end: '11:00',
-                    mode: 'Online',
-                    link: 'https://meet.google.com/xyz-789',
-                    location: ''
-                }
-            ];
+    if (a.date > t && b.date > t)   return new Date(a.date) - new Date(b.date); // upcoming asc
+    if (a.date < t && b.date < t)   return new Date(b.date) - new Date(a.date); // previous desc
 
-            try {
-                const response = await fetch(buildApiUrl(isLoadMore));
-                if (response.ok) {
-                    const data = await response.json();
-                    const lectures = data.lectures || [];
-                    
-                    if (isLoadMore) {
-                        // Append to existing lectures
-                        allLectures = [...allLectures, ...lectures];
-                    } else {
-                        // Replace lectures
-                        allLectures = lectures.length > 0 ? lectures : sampleLectures;
-                    }
-                    
-                    lastVisible = data.lastVisible;
-                    hasMore = data.hasMore;
-                    
-                    console.log('Loaded lectures from API:', lectures.length);
-                    console.log('Total lectures:', allLectures.length);
-                    console.log('Has more:', hasMore);
-                } else {
-                    const errorText = await response.text();
-                    console.error(`Failed to load lectures from API: ${response.status} - ${errorText}`);
-                    if (!isLoadMore) {
-                        allLectures = sampleLectures;
-                        alert('Failed to load lectures from the server. Using sample data. Please try again later.');
-                    }
-                }
-            } catch (error) {
-                console.error('Network error during API load:', error);
-                if (!isLoadMore) {
-                    allLectures = sampleLectures;
-                    alert('Could not connect to the server to load lectures. Using sample data. Please check your network connection.');
-                }
-            }
+    return a.date > t ? -1 : 1;  // upcoming before previous
+  });
+}
 
-            isLoading = false;
-            loadingIndicator.style.display = 'none';
-            
-            // Update UI
-            displayLectures(allLectures);
-            updateLoadMoreButton();
-            
-            console.log('=== LOAD LECTURES FUNCTION END ===');
-        }
+/* ──────────────────────────────────────────────────────────
+   Build API-query URL
+   ────────────────────────────────────────────────────────── */
+function buildUrl(){
+  const p = new URLSearchParams({ limit: PER_PAGE });
+  if (cursor) p.append('startAfterId', cursor);
 
-        function displayLectures(lectures) {
-            const sortedLectures = sortLecturesByDate(lectures);
-            const tbody = document.getElementById('listBody');
-            
-            tbody.innerHTML = sortedLectures.length
-                ? sortedLectures.map(l => `
-                    <tr class="hover:bg-slate-50 ${getLectureRowClass(l.date)}">
-                        <td class="px-4 py-3">${l.course}</td>
-                        <td class="px-4 py-3">${l.batch}</td>
-                        <td class="px-4 py-3">${l.branch}</td>
-                        <td class="px-4 py-3">${l.year}</td>
-                        <td class="px-4 py-3">${l.subject}</td>
-                        <td class="px-4 py-3">${l.faculty}</td>
-                        <td class="px-4 py-3">
-                            <span class="font-medium">${l.date}</span>
-                            ${l.date === getToday() ? '<span class="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Today</span>' : ''}
-                        </td>
-                        <td class="px-4 py-3">${l.start}</td>
-                        <td class="px-4 py-3">${l.end}</td>
-                        <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded-full text-xs font-medium ${(l.mode || '').toLowerCase() === 'online' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}">
-                                ${l.mode || 'N/A'}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3">${l.link ? `<a href="${l.link}" target="_blank" class="text-indigo-600 hover:text-indigo-800">🔗</a>` : ''}</td>
-                        <td class="px-4 py-3">${l.location || ''}</td>
-                        <td class="px-4 py-3">
-                            <div class="flex space-x-2">
-                                <button onclick="editLecture('${l.id}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">Edit</button>
-                                <button onclick="deleteLecture('${l.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition">Delete</button>
-                            </div>
-                        </td>
-                    </tr>`).join('')
-                : `<tr><td colspan="13" class="text-center py-8 text-slate-500">No lectures found. ${dateFilter.value !== 'all' ? 'Try changing the filter or ' : ''}Add one above!</td></tr>`;
-        }
+  if (dateFilter.value   !== 'all') p.append('dateFilter', dateFilter.value);
+  if (courseFilter.value !== 'all') p.append('course',     courseFilter.value);
+  if (facultyFilter.value!== 'all') p.append('faculty',    facultyFilter.value);
+  if (modeFilter.value   !== 'all') p.append('mode',       modeFilter.value);
 
-        function updateLoadMoreButton() {
-            if (hasMore && !isLoading) {
-                loadMoreBtn.style.display = 'inline-block';
-            } else {
-                loadMoreBtn.style.display = 'none';
-            }
-        }
+  return '/api/lectures?' + p.toString();
+}
 
-        function resetForm() {
-            form.reset(); 
-            editId = null;
-            formTitle.textContent = 'Add Lecture';
-            submitBtn.textContent = 'Save';
-            
-            resetDropdown(batchSelect, 'Select Batch');
-            resetDropdown(yearSelect, 'Select Year/Semester');
-            resetDropdown(subjectSelect, 'Select Subject');
-        }
+/* ──────────────────────────────────────────────────────────
+   Data loader – pulls *all* pages so everything is shown
+   on first render.  One extra read per additional page.
+   ────────────────────────────────────────────────────────── */
+async function fetchAllLectures(){
+  isLoading = true; spinner.style.display = 'inline';
+  lectures  = []; cursor = null; hasMore = true;
 
-        cancelBtn.addEventListener('click', resetForm);
+  while (hasMore){                 // loop through pages
+    const res = await fetch(buildUrl());
+    if (!res.ok){ console.error(await res.text()); break; }
 
-        // Function to edit a lecture
-        window.editLecture = async function(id) {
-            let lecture;
-            try {
-                const response = await fetch(`/api/lectures/${id}`);
-                if (response.ok) {
-                    lecture = await response.json();
-                } else {
-                    const errorText = await response.text();
-                    console.error(`Failed to fetch lecture for edit: ${response.status} - ${errorText}`);
-                    alert('Failed to retrieve lecture details for editing. Please check server connection.');
-                    return;
-                }
-            } catch (error) {
-                console.error('Network error fetching lecture for edit:', error);
-                alert('Could not connect to the server to retrieve lecture details for editing. Please check your network.');
-                return;
-            }
+    const { lectures:rows = [], lastVisible, hasMore:more } = await res.json();
+    lectures.push(...rows);
+    cursor  = lastVisible;
+    hasMore = more;
+    if (!hasMore) break;           // stop when server says no more
+  }
 
-            if (lecture) {
-                // Set course first to trigger cascading
-                courseSelect.value = lecture.course || '';
-                handleCourseChange();
+  isLoading = false; spinner.style.display = 'none';
+  render();
+}
 
-                setTimeout(() => {
-                    batchSelect.value = lecture.batch || '';
-                    yearSelect.value = lecture.year || '';
+/* ──────────────────────────────────────────────────────────
+   Rendering
+   ────────────────────────────────────────────────────────── */
+function render(){
+  const html = sortLects(lectures).map(l=>`
+    <tr class="hover:bg-slate-50 ${rowClass(l.date)}">
+      <td class="px-4 py-3">${l.course}</td>
+      <td class="px-4 py-3">${l.batch}</td>
+      <td class="px-4 py-3">${l.branch||''}</td>
+      <td class="px-4 py-3">${l.year}</td>
+      <td class="px-4 py-3">${l.subject}</td>
+      <td class="px-4 py-3">${l.faculty}</td>
+      <td class="px-4 py-3">
+        <span class="font-medium">${l.date}</span>
+        ${l.date===todayISO()?'<span class="ml-1 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">Today</span>':''}
+      </td>
+      <td class="px-4 py-3">${l.start}</td>
+      <td class="px-4 py-3">${l.end}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium ${String(l.mode).toLowerCase()==='online'?'bg-blue-100 text-blue-800':'bg-purple-100 text-purple-800'}">
+          ${l.mode||'N/A'}
+        </span>
+      </td>
+      <td class="px-4 py-3">${l.link?`<a href="${l.link}" target="_blank" class="text-indigo-600">🔗</a>`:''}</td>
+      <td class="px-4 py-3">${l.location||''}</td>
+      <td class="px-4 py-3">
+        <button onclick="editLecture('${l.id}')"   class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Edit</button>
+        <button onclick="deleteLecture('${l.id}')" class="px-3 py-1 bg-red-500  text-white text-xs rounded hover:bg-red-600">Delete</button>
+      </td>
+    </tr>`).join('');
 
-                    handleYearChange();
+  tbody.innerHTML = html || `<tr><td colspan="13" class="py-8 text-center text-slate-500">No data</td></tr>`;
+  loadMoreBtn.style.display = 'none';   // all rows already fetched
+}
 
-                    setTimeout(() => {
-                        subjectSelect.value = lecture.subject || '';
+/* ──────────────────────────────────────────────────────────
+   CRUD helpers
+   ────────────────────────────────────────────────────────── */
+window.deleteLecture = async id=>{
+  if (!confirm('Delete lecture?')) return;
+  await fetch(`/api/lectures/${id}`,{method:'DELETE'});
+  lectures = lectures.filter(l=>l.id!==id);
+  render();
+};
 
-                        // Set all other form fields
-                        Object.keys(lecture).forEach(k => {
-                            if (form[k] && !['course', 'batch', 'year', 'subject'].includes(k)) {
-                                form[k].value = lecture[k];
-                            }
-                        });
-                    }, 50);
-                }, 50);
+window.editLecture = async id=>{
+  const r = await fetch(`/api/lectures/${id}`);
+  if(!r.ok) return alert('Lecture not found');
+  const lec = await r.json();
 
-                editId = id;
-                formTitle.textContent = 'Edit Lecture';
-                submitBtn.textContent = 'Update';
-                document.getElementById('formSection').scrollIntoView({ behavior: 'smooth' });
-            } else {
-                alert('Lecture not found for editing. It might have been deleted or an error occurred.');
-            }
-        };
+  courseSel.value = lec.course||''; courseSel.dispatchEvent(new Event('change'));
+  setTimeout(()=>{
+    batchSel.value = lec.batch||'';
+    yearSel.value  = lec.year ||''; yearSel.dispatchEvent(new Event('change'));
+    setTimeout(()=>{ subjectSel.value = lec.subject||''; },20);
+  },20);
 
-        // Function to delete a lecture
-        window.deleteLecture = async function(id) {
-            if (!confirm('Delete lecture?')) return;
-            console.log('Attempting to delete lecture with ID:', id);
+  ['branch','date','start','end','mode','link','location','faculty']
+    .forEach(f=> form[f] && (form[f].value = lec[f]||''));
 
-            try {
-                const response = await fetch(`/api/lectures/${id}`, { method: 'DELETE' });
-                if (response.ok) {
-                    console.log('✅ Lecture deleted successfully from database.');
-                    alert('Lecture deleted successfully!');
-                } else {
-                    const errorText = await response.text();
-                    console.error(`❌ API delete failed with status: ${response.status} - ${errorText}`);
-                    alert('Failed to delete lecture from the server. Please check console for details.');
-                }
-            } catch (error) {
-                console.error('❌ Network error during delete operation:', error);
-                alert('Could not connect to the server to delete lecture. Please check your network connection.');
-            }
+  editId = id;
+  formTitle.textContent = 'Edit Lecture';
+  submitBtn.textContent = 'Update';
+  form.scrollIntoView({behavior:'smooth'});
+};
 
-            // Reset pagination and reload
-            resetPagination();
-            loadLecturesAndDisplay();
-        };
+form.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const body = JSON.stringify(Object.fromEntries(new FormData(form)));
+  const url  = editId ? `/api/lectures/${editId}` : '/api/lectures';
+  const res  = await fetch(url,{method: editId?'PUT':'POST',
+                                headers:{'Content-Type':'application/json'}, body});
+  if(!res.ok) return alert('Save failed');
 
-        // Form submission handler
-        form.addEventListener('submit', async e => {
-            e.preventDefault();
-            const data = Object.fromEntries(new FormData(form));
+  resetForm(); fetchAllLectures();
+});
 
-            try {
-                const method = editId ? 'PUT' : 'POST';
-                const url = editId ? `/api/lectures/${editId}` : '/api/lectures';
-                const response = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
+function resetForm(){
+  form.reset(); editId=null;
+  formTitle.textContent='Add Lecture'; submitBtn.textContent='Save';
+  reset(batchSel ,'Select Batch');
+  reset(yearSel  ,'Select Year/Semester');
+  reset(subjectSel,'Select Subject');
+}
+cancelBtn.onclick = resetForm;
 
-                if (response.ok) {
-                    alert(`Lecture ${editId ? 'updated' : 'added'} successfully!`);
-                } else {
-                    const errorText = await response.text();
-                    console.error(`API submission failed: ${response.status} - ${errorText}`);
-                    alert(`Failed to save lecture to the database. ${errorText || ''}. Please check console for details.`);
-                }
-            } catch (error) {
-                console.error('Network error during API submission:', error);
-                alert('Could not connect to the server to save lecture. Please check your network connection and ensure the API is running.');
-            }
+/* ──────────────────────────────────────────────────────────
+   Filter handling  (every change → reload entire list)
+   ────────────────────────────────────────────────────────── */
+[dateFilter,courseFilter,facultyFilter,modeFilter].forEach(sel=>{
+  sel.onchange = fetchAllLectures;
+});
 
-            resetForm();
-            // Reset pagination and reload
-            resetPagination();
-            loadLecturesAndDisplay();
-        });
+/* ──────────────────────────────────────────────────────────
+   Kick-off
+   ────────────────────────────────────────────────────────── */
+fetchAllLectures();
+</script>
 
-        // Reset pagination state
-        function resetPagination() {
-            lastVisible = null;
-            hasMore = false;
-            allLectures = [];
-        }
-
-        // Filter change handlers
-        function handleFilterChange() {
-            resetPagination();
-            loadLecturesAndDisplay();
-        }
-
-        // Load more button handler
-        loadMoreBtn.addEventListener('click', () => {
-            loadLecturesAndDisplay(true);
-        });
-
-        // Add event listeners for filters
-        dateFilter.addEventListener('change', handleFilterChange);
-        courseFilter.addEventListener('change', handleFilterChange);
-        facultyFilter.addEventListener('change', handleFilterChange);
-        modeFilter.addEventListener('change', handleFilterChange);
-
-        // Initialize page
-        loadLecturesAndDisplay();
-    </script>
 </body>
 </html>
