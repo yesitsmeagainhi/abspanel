@@ -218,6 +218,7 @@ app.delete('/banners/:id',async (req,res)=>{
   await db.collection('banners').doc(req.params.id).delete();
   res.sendStatus(204);
 });
+app.get('/ping', (_req, res) => res.send('pong'));
 
 
 /**************************************************************************
