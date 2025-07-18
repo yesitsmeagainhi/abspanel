@@ -198,8 +198,8 @@ if (require.main === module) {
     title     : string,
     imageUrl  : string,
     link      : string|null,
-    isActive  : boolean,
-    order     : number,
+    isActive  : 'TRUE' | 'FALSE',   // stored as STRING
+    order     : string,             // also stored as STRING (e.g. "01", "02", …)
     createdAt : Timestamp
   }
 */
@@ -207,7 +207,7 @@ if (require.main === module) {
 r.get('/banners', async (req, res) => {
   try {
     const snap = await db.collection('banners')
-                         .orderBy('order', 'asc')
+                         .orderBy('order', 'asc')       // lexicographic sort
                          .orderBy('createdAt', 'desc')
                          .get();
 
@@ -222,9 +222,7 @@ r.get('/banners', async (req, res) => {
 r.post('/banners', async (req, res) => {
   try {
     const doc = await db.collection('banners').add({
-      ...req.body,
-      isActive : !!req.body.isActive,             // coerce to boolean
-      order    : Number(req.body.order) || 0,
+      ...req.body,                                    // order & isActive stay strings
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
     res.status(201).json({ id: doc.id });
@@ -238,14 +236,7 @@ r.put('/banners/:id', async (req, res) => {
   try {
     await db.collection('banners')
             .doc(req.params.id)
-            .set(
-              {
-                ...req.body,
-                isActive: !!req.body.isActive,
-                order   : Number(req.body.order) || 0
-              },
-              { merge: true }
-            );
+            .set(req.body, { merge: true });          // keep incoming strings as‑is
     res.json({ id: req.params.id });
   } catch (e) {
     console.error(e);
@@ -264,8 +255,12 @@ r.delete('/banners/:id', async (req, res) => {
 });
 
 r.get('/banners/:id', async (req, res) => {
-  const doc = await db.collection('banners').doc(req.params.id).get();
-  if (!doc.exists) return res.status(404).json({ error: 'Banner not found' });
-  res.json(doc.data());
+  try {
+    const doc = await db.collection('banners').doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Banner not found' });
+    res.json(doc.data());
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch banner', details: e.message });
+  }
 });
-
