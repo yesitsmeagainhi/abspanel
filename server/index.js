@@ -190,3 +190,82 @@ if (require.main === module) {
     console.log(`✅  API ready  →  http://localhost:${PORT}/api/ping`)
   );
 }
+
+/*---------- BANNERS ---------------------------------------*/
+/*
+  Expected document shape:
+  {
+    title     : string,
+    imageUrl  : string,
+    link      : string|null,
+    isActive  : boolean,
+    order     : number,
+    createdAt : Timestamp
+  }
+*/
+
+r.get('/banners', async (req, res) => {
+  try {
+    const snap = await db.collection('banners')
+                         .orderBy('order', 'asc')
+                         .orderBy('createdAt', 'desc')
+                         .get();
+
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch banners', details: e.message });
+  }
+});
+
+r.post('/banners', async (req, res) => {
+  try {
+    const doc = await db.collection('banners').add({
+      ...req.body,
+      isActive : !!req.body.isActive,             // coerce to boolean
+      order    : Number(req.body.order) || 0,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.status(201).json({ id: doc.id });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to create banner', details: e.message });
+  }
+});
+
+r.put('/banners/:id', async (req, res) => {
+  try {
+    await db.collection('banners')
+            .doc(req.params.id)
+            .set(
+              {
+                ...req.body,
+                isActive: !!req.body.isActive,
+                order   : Number(req.body.order) || 0
+              },
+              { merge: true }
+            );
+    res.json({ id: req.params.id });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to update banner', details: e.message });
+  }
+});
+
+r.delete('/banners/:id', async (req, res) => {
+  try {
+    await db.collection('banners').doc(req.params.id).delete();
+    res.sendStatus(204);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to delete banner', details: e.message });
+  }
+});
+
+r.get('/banners/:id', async (req, res) => {
+  const doc = await db.collection('banners').doc(req.params.id).get();
+  if (!doc.exists) return res.status(404).json({ error: 'Banner not found' });
+  res.json(doc.data());
+});
+
