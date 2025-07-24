@@ -98,11 +98,61 @@
       </p>
     </section>
 
-    <!-- ─────────────────── TABLE ─────────────────── -->
+    <!-- ───────────── SEARCH + FILTER BAR ───────────── -->
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
+        <h2 class="text-xl font-semibold">Filter Students</h2>
+        <div class="flex gap-2 items-center flex-wrap">
+          <button id="downloadExcelBtn" class="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Download Excel
+          </button>
+          <button id="bulkDeleteBtn" class="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition flex items-center gap-1" style="display: none;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            Delete Selected (<span id="selectedCount">0</span>)
+          </button>
+          <span id="resultCount" class="text-sm text-gray-600 font-medium"></span>
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap gap-4">
+        <input id="searchInput" placeholder="Search by name / phone / ID"
+               class="flex-1 min-w-[220px] border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+
+        <select id="branchFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">All Branches</option>
+          <option>Nalasopara</option><option>Bhayandar</option><option>Malad</option>
+          <option>Thane</option><option>Andheri</option><option>Kurla</option>
+        </select>
+
+        <select id="courseFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">All Courses</option>
+          <option>D.Pharm</option><option>B.Pharm</option><option>GNM</option>
+        </select>
+
+        <select id="batchFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">All Batches</option>
+        </select>
+
+        <select id="roleFilter"  class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
+          <option value="">All Roles</option>
+          <option>Student</option><option>Faculty</option><option>Admin</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ───────────── TABLE + PAGER + TOTAL ───────────── -->
     <section class="bg-white rounded-xl shadow overflow-x-auto">
       <table class="w-full text-sm text-left">
         <thead class="bg-slate-100 text-slate-700 uppercase">
           <tr>
+            <th class="px-4 py-3">
+              <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+            </th>
             <th class="px-4 py-3">Phone</th><th class="px-4 py-3">Name</th><th class="px-4 py-3">Course</th>
             <th class="px-4 py-3">Batch</th><th class="px-4 py-3">Year</th><th class="px-4 py-3">Branch</th>
             <th class="px-4 py-3">Admission&nbsp;Year</th><th class="px-4 py-3">Pending&nbsp;Fees</th>
@@ -112,190 +162,505 @@
         <tbody id="listBody" class="divide-y divide-slate-100"></tbody>
       </table>
 
+      <!-- pager -->
       <div class="flex justify-between items-center px-4 py-3 bg-slate-100 text-sm" id="pager">
         <button id="prevBtn" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Previous</button>
         <span id="pageInfo" class="text-slate-600"></span>
         <button id="nextBtn" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">Next</button>
       </div>
+
+      <!-- TOTAL COUNT -->
+      <div class="px-4 py-3 bg-slate-50 border-t text-sm font-medium">
+        Total Records: <span id="totalCount">0</span>
+      </div>
     </section>
   </main>
 
-  <!-- ─────────────────── SCRIPT ─────────────────── -->
   <script>
-  /* ---------- dropdown cascade ---------- */
-  const dropdownMap = {
-    'D.Pharm': { years:['1st Year','2nd Year'],      batches:['D- Batch D.Pharm','E- Batch D.Pharm','F- Batch D.Pharm'] },
-    'B.Pharm': { years:['sem 1','sem 2','sem 3','sem 4','sem 5','sem 6','sem 7','sem 8'],
-                 batches:['24-25 B.Pharm','25-26 B.Pharm'] },
-    'GNM':     { years:['1st Year','2nd Year','3rd Year'], batches:['E- Batch Gnm','F- Batch Gnm'] }
-  };
-  const courseSel = document.querySelector('select[name="course"]');
-  const batchSel  = document.querySelector('select[name="batch"]');
-  const yearSel   = document.querySelector('select[name="year"]');
+/* ──────────────────────────────────────────────────────────
+   DOM references
+   ────────────────────────────────────────────────────────── */
+const qs  = p => document.querySelector(p);
+const qsa = p => [...document.querySelectorAll(p)];
 
-  courseSel.addEventListener('change', () => {
-    const cfg = dropdownMap[courseSel.value] || { years:[], batches:[] };
-    batchSel.innerHTML = '<option value="">Select Batch</option>' +
-      cfg.batches.map(v=>`<option>${v}</option>`).join('');
-    yearSel.innerHTML  = '<option value="">Select Year</option>' +
-      cfg.years.map(v=>`<option>${v}</option>`).join('');
-  });
+const form        = qs('#form');
+const formTitle   = qs('#formTitle');
+const submitBtn   = qs('#submitBtn');
+const cancelBtn   = qs('#cancelBtn');
 
-  /* ---------- pagination & state ---------- */
-  const perPage = 30;
-  let currentPage = 1;
-  let totalCount  = 0;
+const searchInp   = qs('#searchInput');
+const branchSel   = qs('#branchFilter');
+const courseSelF  = qs('#courseFilter');
+const batchSelF   = qs('#batchFilter');
+const roleSelF    = qs('#roleFilter');
 
-  const cursors   = [null]; // startAfterId for each page (index = page-1)
-  let students    = [];     // docs of current page
+const tableBody   = qs('#listBody');
+const pageInfo    = qs('#pageInfo');
+const prevBtn     = qs('#prevBtn');
+const nextBtn     = qs('#nextBtn');
 
-  /* ---------- helpers ---------- */
-  const qs = p => document.querySelector(p);
-  const render = () => {
-    const rows = students.map( (s,i) => `
-      <tr class="hover:bg-slate-50">
-        <td class="px-4 py-3">${s.number}</td>
-        <td class="px-4 py-3">${s.name}</td>
-        <td class="px-4 py-3">${s.course}</td>
-        <td class="px-4 py-3">${s.batch}</td>
-        <td class="px-4 py-3">${s.year}</td>
-        <td class="px-4 py-3">${s.branch}</td>
-        <td class="px-4 py-3">${s.admissionYear}</td>
-        <td class="px-4 py-3">₹${s.pendingFees}</td>
-        <td class="px-4 py-3">${s.Role}</td>
-        <td class="px-4 py-3">${s.Faculty}</td>
-        <td class="px-4 py-3">
-          <div class="flex space-x-2">
-            <button onclick="editStudent(${i})"
-                    class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Edit</button>
-            <button onclick="deleteStudent('${s.id}',${i})"
-                    class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">Delete</button>
-          </div>
-        </td>
-      </tr>`).join('');
-    qs('#listBody').innerHTML = rows || `<tr><td colspan="11" class="text-center py-8 text-slate-500">No data</td></tr>`;
+const bulkFileInp = qs('#bulkFile');
+const importBtn   = qs('#importBtn');
 
-    const pages = Math.max(1, Math.ceil(totalCount / perPage));
-    qs('#pageInfo').textContent = `Page ${currentPage} of ${pages}`;
-    qs('#prevBtn').disabled = currentPage === 1;
-    qs('#nextBtn').disabled = currentPage >= pages;
-  };
+// New elements
+const downloadExcelBtn = qs('#downloadExcelBtn');
+const bulkDeleteBtn = qs('#bulkDeleteBtn');
+const selectAllCheckbox = qs('#selectAll');
+const selectedCount = qs('#selectedCount');
+const resultCount = qs('#resultCount');
 
-  const buildUrl = () => {
-    const params = new URLSearchParams({ limit: perPage });
-    const cursor = cursors[currentPage-1];
-    if (cursor) params.append('startAfterId', cursor);
-    return '/api/students?' + params.toString();
-  };
+/* ──────────────────────────────────────────────────────────
+   Course → year / batch cascading for the *form*
+   ────────────────────────────────────────────────────────── */
+const dropdownMap = {
+  'D.Pharm': { years:['1st Year','2nd Year'],
+               batches:['D- Batch D.Pharm','E- Batch D.Pharm','F- Batch D.Pharm'] },
+  'B.Pharm': { years:['sem 1','sem 2','sem 3','sem 4','sem 5','sem 6','sem 7','sem 8'],
+               batches:['24-25 B.Pharm','25-26 B.Pharm'] },
+  'GNM'    : { years:['1st Year','2nd Year','3rd Year'],
+               batches:['E- Batch Gnm','F- Batch Gnm'] }
+};
+const courseSel   = qs('select[name="course"]');
+const batchSel    = qs('select[name="batch"]');
+const yearSel     = qs('select[name="year"]');
 
-  const loadPage = async () => {
-    const res  = await fetch(buildUrl());
-    const data = await res.json();
+courseSel.onchange = ()=>{
+  const cfg = dropdownMap[courseSel.value] || {years:[],batches:[]};
+  batchSel.innerHTML = '<option value="">Select Batch</option>' +
+                       cfg.batches.map(v=>`<option>${v}</option>`).join('');
+  yearSel.innerHTML  = '<option value="">Select Year</option>'  +
+                       cfg.years  .map(v=>`<option>${v}</option>`).join('');
+};
 
-    students   = data.students || [];
-    totalCount = data.totalStudents ?? totalCount;          // total only on first page
-    if (data.lastVisible) cursors[currentPage] = data.lastVisible;
-    render();
-  };
+/* ──────────────────────────────────────────────────────────
+   Global state  (client-side pagination over filtered list)
+   ────────────────────────────────────────────────────────── */
+const PER_PAGE      = 30;
+let fullStudents    = [];   // *all* rows fetched from server
+let filteredStudents= [];   // after search / filters
+let currentPage     = 1;
+let selectedStudents = new Set(); // Track selected student IDs
 
-  /* ---------- table actions ---------- */
-  window.editStudent = (idx) => {
-    const stu = students[idx];
-    const f   = qs('#form');
-    Object.entries(stu).forEach(([k,v]) => { if (f[k]) f[k].value = v; });
-    courseSel.dispatchEvent(new Event('change'));           // cascade dropdowns
-    qs('#formTitle').textContent = 'Edit Student';
-    qs('#submitBtn').textContent = 'Update';
-    f.dataset.editId = stu.id;
-    f.scrollIntoView({ behavior:'smooth' });
-  };
+/* ──────────────────────────────────────────────────────────
+   Fetch *all* students (multi-page loop)
+   ────────────────────────────────────────────────────────── */
+async function fetchAllStudents(){
+  fullStudents = [];
+  let cursor   = null, hasMore = true;
+  while(hasMore){
+    const params = new URLSearchParams({limit:1000});
+    if(cursor) params.append('startAfterId', cursor);
+    const res = await fetch('/api/students?'+params);
+    const {students=[], lastVisible, hasMore:more} = await res.json();
+    fullStudents.push(...students);
+    cursor  = lastVisible;
+    hasMore = more;
+  }
+  selectedStudents.clear();
+  applyFilters();
+}
 
-  window.deleteStudent = async (id, idx) => {
-    if (!confirm('Delete student?')) return;
-    await fetch(`/api/students/${id}`, { method:'DELETE' });
-    students.splice(idx,1);
-    totalCount--;
-    render();
-  };
+/* ──────────────────────────────────────────────────────────
+   Search & filter logic
+   ────────────────────────────────────────────────────────── */
+function applyFilters(){
+  const term   = searchInp.value.trim().toLowerCase();
+  const branch = branchSel.value;
+  const course = courseSelF.value;
+  const batch  = batchSelF.value;
+  const role   = roleSelF.value;
 
-  /* ---------- form submit ---------- */
-  qs('#form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
-    const editId = e.target.dataset.editId;
-
-    const method = editId ? 'PUT' : 'POST';
-    const url    = editId ? `/api/students/${editId}` : '/api/students';
-
-    const res = await fetch(url, {
-      method,
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(data)
-    });
-    if (!res.ok) return alert('Save failed');
-
-    if (editId) {
-      // update in-place
-      const idx = students.findIndex(s=>s.id===editId);
-      if (idx>-1) students[idx] = { id:editId, ...data };
-    } else {
-      const { id } = await res.json();
-      if (currentPage === 1) students.unshift({ id, ...data });   // show instantly
-      totalCount++;
+  filteredStudents = fullStudents.filter(s=>{
+    if(branch && s.branch!==branch)   return false;
+    if(course && s.course!==course)   return false;
+    if(batch  && s.batch!==batch)     return false;
+    if(role   && s.Role!==role)       return false;
+    if(term){
+      return (s.name||'').toLowerCase().includes(term) ||
+             (s.number||'').includes(term) ||
+             (s.id||'').includes(term);
     }
-    resetForm();
-    render();
+    return true;
   });
 
-  const resetForm = () => {
-    qs('#form').reset();
-    delete qs('#form').dataset.editId;
-    qs('#formTitle').textContent = 'Add Student';
-    qs('#submitBtn').textContent = 'Save';
-    batchSel.innerHTML = '<option value="">Select Batch</option>';
-    yearSel.innerHTML  = '<option value="">Select Year</option>';
+  updateDependentDropdowns();
+  currentPage = 1;
+  updateSelectionUI();
+  renderTable();
+}
+
+/* ──────────────────────────────────────────────────────────
+   After a selection, narrow remaining dropdown options
+   ────────────────────────────────────────────────────────── */
+function updateDependentDropdowns(){
+  const unique = (arr,field)=>[...new Set(arr.map(o=>o[field]).filter(Boolean))];
+
+  /* Build lists based on current filteredStudents */
+  const availBranches = unique(filteredStudents,'branch');
+  const availCourses  = unique(filteredStudents,'course');
+  const availBatches  = unique(filteredStudents,'batch');
+  const availRoles    = unique(filteredStudents,'Role');
+
+  const rebuild = (sel,list,placeholder)=>{
+    const keep = sel.value;
+    sel.innerHTML = `<option value="">${placeholder}</option>` +
+                    list.sort().map(v=>`<option>${v}</option>`).join('');
+    if(list.includes(keep)) sel.value = keep; else sel.value = '';
   };
-  qs('#cancelBtn').onclick = resetForm;
 
-  /* ---------- pagination buttons ---------- */
-  qs('#prevBtn').onclick = () => { if (currentPage>1){ currentPage--; loadPage(); } };
-  qs('#nextBtn').onclick = () => {
-    const pages = Math.ceil(totalCount / perPage);
-    if (currentPage < pages){ currentPage++; loadPage(); }
-  };
+  rebuild(branchSel , availBranches,'All Branches');
+  rebuild(courseSelF, availCourses ,'All Courses');
+  rebuild(batchSelF , availBatches ,'All Batches');
+  rebuild(roleSelF  , availRoles  ,'All Roles');
+}
 
-  /* ---------- bulk import ---------- */
-  const headerMap = { phone:'number', name:'name', course:'course', batch:'batch',
-                      year:'year', branch:'branch', 'admission year':'admissionYear',
-                      'pending fees':'pendingFees', role:'Role', faculty:'Faculty', password:'password' };
+/* ──────────────────────────────────────────────────────────
+   Selection management
+   ────────────────────────────────────────────────────────── */
+function updateSelectionUI() {
+  const count = selectedStudents.size;
+  selectedCount.textContent = count;
+  bulkDeleteBtn.style.display = count > 0 ? 'flex' : 'none';
+  
+  // Update result count
+  resultCount.textContent = `${filteredStudents.length} result${filteredStudents.length !== 1 ? 's' : ''}`;
+}
 
-  qs('#importBtn').onclick = () => {
-    const file = qs('#bulkFile').files[0];
-    if (!file) return alert('Choose a file');
-    const reader = new FileReader();
-    reader.onload = async e => {
-      const wb   = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-      const ws   = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1,raw:false});
-      const headers = rows[0].map(h=>String(h||'').toLowerCase());
-      const valid = [];
-      rows.slice(1).forEach(r=>{
-        const obj={}; headers.forEach((h,i)=>{ if(headerMap[h]) obj[headerMap[h]]=r[i]; });
-        if (obj.number && obj.name && obj.course) valid.push(obj);
-      });
-      let ok=0, fail=0;
-      for (const s of valid){
-        const resp = await fetch('/api/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
-        resp.ok ? ok++ : fail++;
+function handleStudentSelection(studentId, isChecked) {
+  if (isChecked) {
+    selectedStudents.add(studentId);
+  } else {
+    selectedStudents.delete(studentId);
+  }
+  updateSelectionUI();
+  updateSelectAllCheckbox();
+}
+
+function updateSelectAllCheckbox() {
+  const currentPageStudents = getCurrentPageStudents();
+  const allSelected = currentPageStudents.length > 0 && 
+                     currentPageStudents.every(s => selectedStudents.has(s.id));
+  const someSelected = currentPageStudents.some(s => selectedStudents.has(s.id));
+  
+  selectAllCheckbox.checked = allSelected;
+  selectAllCheckbox.indeterminate = someSelected && !allSelected;
+}
+
+function getCurrentPageStudents() {
+  const start = (currentPage-1)*PER_PAGE;
+  return filteredStudents.slice(start, start+PER_PAGE);
+}
+
+// Select All functionality
+selectAllCheckbox.addEventListener('change', function() {
+  const currentPageStudents = getCurrentPageStudents();
+  
+  if (this.checked) {
+    currentPageStudents.forEach(s => selectedStudents.add(s.id));
+  } else {
+    currentPageStudents.forEach(s => selectedStudents.delete(s.id));
+  }
+  
+  updateSelectionUI();
+  renderTable();
+});
+
+/* ──────────────────────────────────────────────────────────
+   Rendering (pagination)
+   ────────────────────────────────────────────────────────── */
+function renderTable(){
+  const pages   = Math.max(1, Math.ceil(filteredStudents.length / PER_PAGE));
+  const start   = (currentPage-1)*PER_PAGE;
+  const slice   = filteredStudents.slice(start, start+PER_PAGE);
+
+  /* rows */
+  tableBody.innerHTML = slice.map(s=>`
+    <tr class="hover:bg-slate-50 ${selectedStudents.has(s.id) ? 'bg-blue-50' : ''}">
+      <td class="px-4 py-3">
+        <input type="checkbox" 
+               class="student-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" 
+               data-student-id="${s.id}" 
+               ${selectedStudents.has(s.id) ? 'checked' : ''}>
+      </td>
+      <td class="px-4 py-3">${s.number}</td>
+      <td class="px-4 py-3">${s.name}</td>
+      <td class="px-4 py-3">${s.course}</td>
+      <td class="px-4 py-3">${s.batch}</td>
+      <td class="px-4 py-3">${s.year}</td>
+      <td class="px-4 py-3">${s.branch}</td>
+      <td class="px-4 py-3">${s.admissionYear}</td>
+      <td class="px-4 py-3">₹${s.pendingFees}</td>
+      <td class="px-4 py-3">${s.Role}</td>
+      <td class="px-4 py-3">${s.Faculty}</td>
+      <td class="px-4 py-3">
+        <div class="flex space-x-2">
+          <button onclick="editStudent('${s.id}')"   class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Edit</button>
+          <button onclick="deleteStudent('${s.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">Delete</button>
+        </div>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="12" class="py-8 text-center text-slate-500">No data</td></tr>`;
+
+  // Add event listeners to checkboxes
+  qsa('.student-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      handleStudentSelection(this.dataset.studentId, this.checked);
+    });
+  });
+
+  /* pager */
+  pageInfo.textContent   = `Page ${currentPage} of ${pages}`;
+  prevBtn.disabled       = currentPage === 1;
+  nextBtn.disabled       = currentPage === pages;
+
+  /* TOTAL count */
+  qs('#totalCount').textContent = filteredStudents.length;
+  
+  updateSelectAllCheckbox();
+}
+
+/* ──────────────────────────────────────────────────────────
+   Download Excel functionality
+   ────────────────────────────────────────────────────────── */
+function downloadExcel() {
+  if (filteredStudents.length === 0) {
+    alert('No students to download. Please adjust your filters or add some students.');
+    return;
+  }
+
+  // Create workbook and worksheet
+  const wb = XLSX.utils.book_new();
+  
+  // Prepare data for Excel
+  const excelData = filteredStudents.map(student => ({
+    'Phone Number': student.number || '',
+    'Name': student.name || '',
+    'Course': student.course || '',
+    'Batch': student.batch || '',
+    'Year': student.year || '',
+    'Branch': student.branch || '',
+    'Admission Year': student.admissionYear || '',
+    'Pending Fees': student.pendingFees || '',
+    'Role': student.Role || '',
+    'Faculty': student.Faculty || ''
+  }));
+
+  // Create worksheet
+  const ws = XLSX.utils.json_to_sheet(excelData);
+  
+  // Add worksheet to workbook
+  XLSX.utils.book_append_sheet(wb, ws, "Students");
+  
+  // Generate filename with current date and filter info
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '');
+  
+  let filterInfo = '';
+  const activeFilters = [];
+  
+  if (branchSel.value) activeFilters.push(branchSel.value);
+  if (courseSelF.value) activeFilters.push(courseSelF.value);
+  if (batchSelF.value) activeFilters.push(batchSelF.value);
+  if (roleSelF.value) activeFilters.push(roleSelF.value);
+  if (searchInp.value.trim()) activeFilters.push('filtered');
+  
+  if (activeFilters.length > 0) {
+    filterInfo = '_' + activeFilters.join('_').replace(/[^a-zA-Z0-9]/g, '');
+  }
+  
+  const filename = `students_${dateStr}_${timeStr}${filterInfo}.xlsx`;
+  
+  // Download file
+  XLSX.writeFile(wb, filename);
+  
+  // Show success feedback
+  const originalText = downloadExcelBtn.innerHTML;
+  downloadExcelBtn.innerHTML = `
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    Downloaded!
+  `;
+  downloadExcelBtn.disabled = true;
+  
+  setTimeout(() => {
+    downloadExcelBtn.innerHTML = originalText;
+    downloadExcelBtn.disabled = false;
+  }, 2000);
+}
+
+/* ──────────────────────────────────────────────────────────
+   Bulk delete functionality
+   ────────────────────────────────────────────────────────── */
+async function bulkDeleteStudents() {
+  if (selectedStudents.size === 0) {
+    alert('No students selected for deletion.');
+    return;
+  }
+
+  const count = selectedStudents.size;
+  if (!confirm(`Are you sure you want to delete ${count} student${count > 1 ? 's' : ''}? This action cannot be undone.`)) {
+    return;
+  }
+
+  // Show loading state
+  const originalText = bulkDeleteBtn.innerHTML;
+  bulkDeleteBtn.innerHTML = `
+    <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    Deleting...
+  `;
+  bulkDeleteBtn.disabled = true;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  // Delete students one by one
+  for (const studentId of selectedStudents) {
+    try {
+      const res = await fetch(`/api/students/${studentId}`, {method: 'DELETE'});
+      if (res.ok) {
+        successCount++;
+        fullStudents = fullStudents.filter(s => s.id !== studentId);
+      } else {
+        failCount++;
       }
-      alert(`Imported ${ok} students${fail?' — '+fail+' failed':''}`);
-      if (currentPage===1) loadPage();   // refresh first page view
-    };
-    reader.readAsArrayBuffer(file);
-  };
+    } catch (error) {
+      failCount++;
+      console.error('Delete failed for student:', studentId, error);
+    }
+  }
 
-  /* ---------- kick-off ---------- */
-  loadPage();
-  </script>
+  // Clear selections and refresh
+  selectedStudents.clear();
+  applyFilters();
+
+  // Show results
+  let message = `Successfully deleted ${successCount} student${successCount !== 1 ? 's' : ''}`;
+  if (failCount > 0) {
+    message += `, ${failCount} failed`;
+  }
+  alert(message);
+
+  // Reset button
+  bulkDeleteBtn.innerHTML = originalText;
+  bulkDeleteBtn.disabled = false;
+}
+
+/* ──────────────────────────────────────────────────────────
+   CRUD helpers  (edit / delete reuse existing server routes)
+   ────────────────────────────────────────────────────────── */
+window.editStudent = async id=>{
+  const stu = fullStudents.find(s=>s.id===id);
+  if(!stu) return alert('Student not found');
+  Object.entries(stu).forEach(([k,v])=>{ if(form[k]) form[k].value=v; });
+  courseSel.dispatchEvent(new Event('change'));
+  form.dataset.editId = id;
+  formTitle.textContent='Edit Student';
+  submitBtn.textContent='Update';
+  form.scrollIntoView({behavior:'smooth'});
+};
+
+window.deleteStudent = async id=>{
+  if(!confirm('Delete student?')) return;
+  const res = await fetch(`/api/students/${id}`,{method:'DELETE'});
+  if(res.ok){
+    fullStudents = fullStudents.filter(s=>s.id!==id);
+    selectedStudents.delete(id);
+    applyFilters();
+  }else alert('Delete failed');
+};
+
+/* ──────────────────────────────────────────────────────────
+   Form submit (add / update)
+   ────────────────────────────────────────────────────────── */
+form.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(form));
+  const editId = form.dataset.editId;
+  const method = editId? 'PUT':'POST';
+  const url    = editId? `/api/students/${editId}`:'/api/students';
+
+  const res = await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if(!res.ok) return alert('Save failed');
+  if(editId){
+    const idx = fullStudents.findIndex(s=>s.id===editId);
+    fullStudents[idx] = {id:editId,...data};
+  }else{
+    const {id}=await res.json();
+    fullStudents.push({id,...data});
+  }
+  resetForm(); applyFilters();
+});
+
+function resetForm(){
+  form.reset(); delete form.dataset.editId;
+  formTitle.textContent='Add Student'; submitBtn.textContent='Save';
+  batchSel.innerHTML = '<option value="">Select Batch</option>';
+  yearSel.innerHTML  = '<option value="">Select Year</option>';
+}
+
+cancelBtn.onclick = resetForm;
+
+/* ──────────────────────────────────────────────────────────
+   Pagination buttons
+   ────────────────────────────────────────────────────────── */
+prevBtn.onclick = ()=>{ if(currentPage>1){ currentPage--; renderTable(); } };
+nextBtn.onclick = ()=>{ const pages=Math.ceil(filteredStudents.length/PER_PAGE);
+                        if(currentPage<pages){ currentPage++; renderTable(); } };
+
+/* ──────────────────────────────────────────────────────────
+   Live search & filter events
+   ────────────────────────────────────────────────────────── */
+searchInp.addEventListener('input', applyFilters);
+qsa('#branchFilter, #courseFilter, #batchFilter, #roleFilter')
+  .forEach(sel=> sel.addEventListener('change', applyFilters));
+
+/* ──────────────────────────────────────────────────────────
+   Event listeners for new functionality
+   ────────────────────────────────────────────────────────── */
+downloadExcelBtn.addEventListener('click', downloadExcel);
+bulkDeleteBtn.addEventListener('click', bulkDeleteStudents);
+
+/* ──────────────────────────────────────────────────────────
+   Bulk import (unchanged except refresh logic)
+   ────────────────────────────────────────────────────────── */
+importBtn.onclick = ()=>{
+  const file = bulkFileInp.files[0];
+  if(!file) return alert('Choose a file');
+  const reader = new FileReader();
+  reader.onload = async e=>{
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
+    const headers=rows[0].map(h=>String(h||'').toLowerCase());
+    const map={phone:'number',name:'name',course:'course',batch:'batch',
+               year:'year',branch:'branch','admission year':'admissionYear',
+               'pending fees':'pendingFees',role:'Role',faculty:'Faculty',
+               password:'password'};
+    const dataRows=rows.slice(1).map(r=>{
+      const o={}; headers.forEach((h,i)=> map[h]&&(o[map[h]]=r[i]));
+      return o.number&&o.name&&o.course?o:null;
+    }).filter(Boolean);
+
+    let ok=0,fail=0;
+    for(const s of dataRows){
+      const res=await fetch('/api/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(s)});
+      res.ok?ok++:fail++;
+    }
+    alert(`Imported ${ok} students${fail?` — ${fail} failed`:''}`);
+    fetchAllStudents();
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+/* ──────────────────────────────────────────────────────────
+   Kick-off
+   ────────────────────────────────────────────────────────── */
+fetchAllStudents();
+</script>
+
 </body>
 </html>
