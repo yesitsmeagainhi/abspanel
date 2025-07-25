@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <title>Students CRUD</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.tailwindcss.com   "></script>
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js   "></script>
 </head>
 
 <body class="bg-slate-50 text-slate-800 font-sans">
@@ -40,6 +40,7 @@
 
         <select name="course" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">Select Course</option>
+          <option value="-">-</option>
           <option value="D.Pharm">D.Pharm</option>
           <option value="B.Pharm">B.Pharm</option>
           <option value="GNM">GNM</option>
@@ -47,23 +48,27 @@
 
         <select name="batch"  required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">Select Batch</option>
+          <option value="-">-</option>
         </select>
 
         <select name="year"   required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">Select Year</option>
+          <option value="-">-</option>
         </select>
 
         <select name="branch" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">Select Branch</option>
+          <option value="-">-</option>
           <option>Nalasopara</option><option>Bhayandar</option><option>Malad</option>
           <option>Thane</option><option>Andheri</option><option>Kurla</option>
         </select>
 
-        <input name="admissionYear" placeholder="Admission Year" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
-        <input name="pendingFees"   placeholder="Pending Fees"   required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+        <input name="admissionYear" placeholder="Admission Year (or enter - for none)" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+        <input name="pendingFees"   placeholder="Pending Fees (or enter - for none)"   class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
 
         <select name="Role" required class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">Select Role</option>
+          <option value="-">-</option>
           <option>Student</option><option>Faculty</option><option>Admin</option>
         </select>
 
@@ -125,21 +130,25 @@
 
         <select id="branchFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">All Branches</option>
+          <option value="-">-</option>
           <option>Nalasopara</option><option>Bhayandar</option><option>Malad</option>
           <option>Thane</option><option>Andheri</option><option>Kurla</option>
         </select>
 
         <select id="courseFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">All Courses</option>
+          <option value="-">-</option>
           <option>D.Pharm</option><option>B.Pharm</option><option>GNM</option>
         </select>
 
         <select id="batchFilter" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">All Batches</option>
+          <option value="-">-</option>
         </select>
 
         <select id="roleFilter"  class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500">
           <option value="">All Roles</option>
+          <option value="-">-</option>
           <option>Student</option><option>Faculty</option><option>Admin</option>
         </select>
       </div>
@@ -207,7 +216,47 @@ const downloadExcelBtn = qs('#downloadExcelBtn');
 const bulkDeleteBtn = qs('#bulkDeleteBtn');
 const selectAllCheckbox = qs('#selectAll');
 const selectedCount = qs('#selectedCount');
-const resultCount = qs('#resultCount');
+const admissionYearInput = qs('input[name="admissionYear"]');
+const pendingFeesInput = qs('input[name="pendingFees"]');
+
+// Smart dash handling for admission year and pending fees
+function setupSmartDashHandling() {
+  [admissionYearInput, pendingFeesInput].forEach(input => {
+    if (!input) return;
+    
+    input.addEventListener('input', function() {
+      // If user types something and it's not just "-", remove any "-" that might be there
+      if (this.value && this.value !== '-' && this.value.includes('-')) {
+        // Remove "-" from the input if user is typing other content
+        this.value = this.value.replace(/-/g, '');
+      }
+    });
+    
+    input.addEventListener('keydown', function(e) {
+      // Allow "-" to be entered manually
+      if (e.key === '-') {
+        // If field is empty or only contains "-", allow it
+        if (!this.value || this.value === '-') {
+          return true;
+        }
+        // If field has other content, prevent "-" 
+        e.preventDefault();
+        return false;
+      }
+    });
+    
+    input.addEventListener('blur', function() {
+      // Clean up the field on blur
+      if (this.value && this.value !== '-') {
+        // Remove any "-" characters if there's other content
+        this.value = this.value.replace(/-/g, '');
+      }
+    });
+  });
+}
+
+// Call setup function
+setupSmartDashHandling();
 
 /* ──────────────────────────────────────────────────────────
    Course → year / batch cascading for the *form*
@@ -226,9 +275,9 @@ const yearSel     = qs('select[name="year"]');
 
 courseSel.onchange = ()=>{
   const cfg = dropdownMap[courseSel.value] || {years:[],batches:[]};
-  batchSel.innerHTML = '<option value="">Select Batch</option>' +
+  batchSel.innerHTML = '<option value="">Select Batch</option><option value="-">-</option>' +
                        cfg.batches.map(v=>`<option>${v}</option>`).join('');
-  yearSel.innerHTML  = '<option value="">Select Year</option>'  +
+  yearSel.innerHTML  = '<option value="">Select Year</option><option value="-">-</option>'  +
                        cfg.years  .map(v=>`<option>${v}</option>`).join('');
 };
 
@@ -303,9 +352,9 @@ function updateDependentDropdowns(){
 
   const rebuild = (sel,list,placeholder)=>{
     const keep = sel.value;
-    sel.innerHTML = `<option value="">${placeholder}</option>` +
+    sel.innerHTML = `<option value="">${placeholder}</option><option value="-">-</option>` +
                     list.sort().map(v=>`<option>${v}</option>`).join('');
-    if(list.includes(keep)) sel.value = keep; else sel.value = '';
+    if(list.includes(keep) || keep === '-') sel.value = keep; else sel.value = '';
   };
 
   rebuild(branchSel , availBranches,'All Branches');
@@ -388,8 +437,8 @@ function renderTable(){
       <td class="px-4 py-3">${s.batch}</td>
       <td class="px-4 py-3">${s.year}</td>
       <td class="px-4 py-3">${s.branch}</td>
-      <td class="px-4 py-3">${s.admissionYear}</td>
-      <td class="px-4 py-3">₹${s.pendingFees}</td>
+      <td class="px-4 py-3">${s.admissionYear || '-'}</td>
+      <td class="px-4 py-3">${s.pendingFees === '-' ? '-' : (s.pendingFees ? '₹' + s.pendingFees : '-')}</td>
       <td class="px-4 py-3">${s.Role}</td>
       <td class="px-4 py-3">${s.Faculty}</td>
       <td class="px-4 py-3">
@@ -438,8 +487,8 @@ function downloadExcel() {
     'Batch': student.batch || '',
     'Year': student.year || '',
     'Branch': student.branch || '',
-    'Admission Year': student.admissionYear || '',
-    'Pending Fees': student.pendingFees || '',
+    'Admission Year': student.admissionYear || '-',
+    'Pending Fees': student.pendingFees || '-',
     'Role': student.Role || '',
     'Faculty': student.Faculty || ''
   }));
@@ -578,7 +627,17 @@ window.deleteStudent = async id=>{
    ────────────────────────────────────────────────────────── */
 form.addEventListener('submit',async e=>{
   e.preventDefault();
-  const data = Object.fromEntries(new FormData(form));
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData);
+  
+  // Handle admission year and pending fees - set to "-" if empty
+  if (!data.admissionYear || data.admissionYear.trim() === '') {
+    data.admissionYear = '-';
+  }
+  if (!data.pendingFees || data.pendingFees.trim() === '') {
+    data.pendingFees = '-';
+  }
+  
   const editId = form.dataset.editId;
   const method = editId? 'PUT':'POST';
   const url    = editId? `/api/students/${editId}`:'/api/students';
@@ -598,8 +657,8 @@ form.addEventListener('submit',async e=>{
 function resetForm(){
   form.reset(); delete form.dataset.editId;
   formTitle.textContent='Add Student'; submitBtn.textContent='Save';
-  batchSel.innerHTML = '<option value="">Select Batch</option>';
-  yearSel.innerHTML  = '<option value="">Select Year</option>';
+  batchSel.innerHTML = '<option value="">Select Batch</option><option value="-">-</option>';
+  yearSel.innerHTML  = '<option value="">Select Year</option><option value="-">-</option>';
 }
 
 cancelBtn.onclick = resetForm;
