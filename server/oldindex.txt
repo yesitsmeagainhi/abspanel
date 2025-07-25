@@ -102,28 +102,17 @@ r.get('/students/:id', async (req,res)=>{
   res.json(d.data());
 });
 
-/*---------- LECTURES with PAGINATION support --------------------------------------*/
+/*---------- LECTURES --------------------------------------*/
 r.get('/lectures', async (req,res)=>{
   try{
     const limit   = parseInt(req.query.limit||'30',10);
-    const page    = parseInt(req.query.page||'1',10);        // NEW: page number
     const afterId = req.query.startAfterId || null;
-    const { dateFilter, course, faculty, mode, branch, startDate, endDate } = req.query;
+    const { dateFilter, course, faculty, mode } = req.query;
 
     /* order field logic */
     let orderField='createdAt', orderDir='desc';
-    
-    // FIX: Proper date handling for Indian timezone
-    const now = new Date();
-    const today = new Date(now.getTime() + (5.5 * 60 * 60 * 1000)); // IST offset
-    today.setUTCHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
-    
-    const tomorrow = new Date(today);
-    tomorrow.setUTCDate(today.getUTCDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-    console.log('Server dates:', { todayStr, tomorrowStr, serverTime: now.toISOString() }); // Debug log
+    const today=new Date(); today.setHours(0,0,0,0);
+    const tomorrow=new Date(today); tomorrow.setDate(today.getDate()+1);
 
     const col = db.collection('lectures');
     const ineq = dateFilter==='previous'||dateFilter==='upcoming';
@@ -131,123 +120,29 @@ r.get('/lectures', async (req,res)=>{
 
     let q = col.orderBy(orderField,orderDir);
 
-    // Apply filters
     if (course  && course!=='all')  q=q.where('course','==',course);
     if (faculty && faculty!=='all') q=q.where('faculty','==',faculty);
-    if (branch  && branch!=='all')  q=q.where('branch','==',branch);
     if (mode    && mode!=='all')
       q=q.where('mode','==',mode.charAt(0).toUpperCase()+mode.slice(1));
 
-    // Date filtering with corrected dates
-    if (dateFilter==='today') {
-      console.log('Filtering for today:', todayStr);
-      q=q.where('date','==',todayStr);
-    } else if (dateFilter==='tomorrow') {
-      console.log('Filtering for tomorrow:', tomorrowStr);
-      q=q.where('date','==',tomorrowStr);
-    } else if (dateFilter==='previous') {
-      q=q.where('date','<', todayStr);
-    } else if (dateFilter==='upcoming') {
-      q=q.where('date','>=',tomorrowStr);
-    } else if (dateFilter==='this_week') {
-      // Get start of week (Sunday)
-      const weekStart = new Date(today);
-      weekStart.setUTCDate(today.getUTCDate() - today.getUTCDay());
-      const weekEnd = new Date(weekStart);
-      weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
-      
-      const weekStartStr = weekStart.toISOString().split('T')[0];
-      const weekEndStr = weekEnd.toISOString().split('T')[0];
-      
-      q=q.where('date','>=',weekStartStr).where('date','<=',weekEndStr);
-    } else if (dateFilter==='next_week') {
-      // Get start of next week
-      const nextWeekStart = new Date(today);
-      nextWeekStart.setUTCDate(today.getUTCDate() + (7 - today.getUTCDay()));
-      const nextWeekEnd = new Date(nextWeekStart);
-      nextWeekEnd.setUTCDate(nextWeekStart.getUTCDate() + 6);
-      
-      const nextWeekStartStr = nextWeekStart.toISOString().split('T')[0];
-      const nextWeekEndStr = nextWeekEnd.toISOString().split('T')[0];
-      
-      q=q.where('date','>=',nextWeekStartStr).where('date','<=',nextWeekEndStr);
-    } else if (startDate && endDate) {
-      // Custom date range
-      q=q.where('date','>=',startDate).where('date','<=',endDate);
-    }
+    if (dateFilter==='today')
+      q=q.where('date','==',today.toISOString().split('T')[0]);
+    else if (dateFilter==='previous')
+      q=q.where('date','<', today.toISOString().split('T')[0]);
+    else if (dateFilter==='upcoming')
+      q=q.where('date','>=',tomorrow.toISOString().split('T')[0]);
 
-    // NEW: Handle pagination
     if (afterId){
       const s=await col.doc(afterId).get();
       if(!s.exists) return res.status(404).json({error:'startAfterId not found'});
       q=q.startAfter(s);
-    } else if (page > 1) {
-      // Offset-based pagination for page numbers
-      const offset = (page - 1) * limit;
-      q = q.offset(offset);
     }
 
     const snap = await q.limit(limit).get();
     const rows = snap.docs.map(d=>({id:d.id,...d.data()}));
     const last = snap.size ? snap.docs[snap.size-1].id : null;
 
-    // NEW: Get total count for pagination (only on first page or when no cursor)
-    let totalCount = null;
-    if (page === 1 && !afterId) {
-      // Build count query with same filters
-      let countQuery = col;
-      
-      if (course && course !== 'all') countQuery = countQuery.where('course', '==', course);
-      if (faculty && faculty !== 'all') countQuery = countQuery.where('faculty', '==', faculty);
-      if (branch && branch !== 'all') countQuery = countQuery.where('branch', '==', branch);
-      if (mode && mode !== 'all') countQuery = countQuery.where('mode', '==', mode.charAt(0).toUpperCase() + mode.slice(1));
-      
-      if (dateFilter === 'today')
-        countQuery = countQuery.where('date', '==', todayStr);
-      else if (dateFilter === 'tomorrow')
-        countQuery = countQuery.where('date', '==', tomorrowStr);
-      else if (dateFilter === 'previous')
-        countQuery = countQuery.where('date', '<', todayStr);
-      else if (dateFilter === 'upcoming')
-        countQuery = countQuery.where('date', '>=', tomorrowStr);
-      else if (dateFilter === 'this_week') {
-        const weekStart = new Date(today);
-        weekStart.setUTCDate(today.getUTCDate() - today.getUTCDay());
-        const weekEnd = new Date(weekStart);
-        weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
-        
-        const weekStartStr = weekStart.toISOString().split('T')[0];
-        const weekEndStr = weekEnd.toISOString().split('T')[0];
-        
-        countQuery = countQuery.where('date', '>=', weekStartStr).where('date', '<=', weekEndStr);
-      } else if (dateFilter === 'next_week') {
-        const nextWeekStart = new Date(today);
-        nextWeekStart.setUTCDate(today.getUTCDate() + (7 - today.getUTCDay()));
-        const nextWeekEnd = new Date(nextWeekStart);
-        nextWeekEnd.setUTCDate(nextWeekStart.getUTCDate() + 6);
-        
-        const nextWeekStartStr = nextWeekStart.toISOString().split('T')[0];
-        const nextWeekEndStr = nextWeekEnd.toISOString().split('T')[0];
-        
-        countQuery = countQuery.where('date', '>=', nextWeekStartStr).where('date', '<=', nextWeekEndStr);
-      } else if (startDate && endDate) {
-        countQuery = countQuery.where('date', '>=', startDate).where('date', '<=', endDate);
-      }
-      
-      const countSnap = await countQuery.count().get();
-      totalCount = countSnap.data().count;
-    }
-
-    const response = {
-      lectures: rows,
-      lastVisible: last,
-      hasMore: snap.size === limit,
-      currentPage: page,           // NEW
-      totalCount: totalCount,      // NEW (only sent on first page)
-      serverDate: todayStr         // NEW: for debugging
-    };
-
-    res.json(response);
+    res.json({lectures:rows,lastVisible:last,hasMore:snap.size===limit});
   }catch(e){
     console.error(e);
     res.status(500).json({error:'Failed to fetch lectures',details:e.message});
