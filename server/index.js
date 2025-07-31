@@ -303,6 +303,45 @@ r.get('/lectures/:id', async (req,res)=>{
   if(!d.exists) return res.status(404).json({error:'Lecture not found'});
   res.json(d.data());
 });
+/*---------- ANNOUNCEMENTS ---------------------------------*/
+r.get('/announcements', async (req, res) => {
+  try {
+    const snap = await db.collection('announcements')
+                         .orderBy('createdAt', 'desc')
+                         .get();
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch announcements' });
+  }
+});
+
+r.post('/announcements', async (req, res) => {
+  const ref = await db.collection('announcements').add({
+    ...req.body,
+    createdAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+  res.status(201).json({ id: ref.id });
+});
+
+r.put('/announcements/:id', async (req, res) => {
+  await db.collection('announcements')
+          .doc(req.params.id)
+          .set(req.body, { merge: true });
+  res.json({ id: req.params.id });
+});
+
+r.delete('/announcements/:id', async (req, res) => {
+  await db.collection('announcements').doc(req.params.id).delete();
+  res.sendStatus(204);
+});
+
+r.get('/announcements/:id', async (req, res) => {
+  const doc = await db.collection('announcements').doc(req.params.id).get();
+  if (!doc.exists) return res.status(404).json({ error: 'Announcement not found' });
+  res.json({ id: doc.id, ...doc.data() });
+});
 
 /*---------- Misc ------------------------------------------*/
 r.get('/ping',(_req,res)=>res.send('pong'));
