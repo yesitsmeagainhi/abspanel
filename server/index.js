@@ -343,6 +343,176 @@ r.get('/announcements/:id', async (req, res) => {
   res.json({ id: doc.id, ...doc.data() });
 });
 
+/*---------- BANNERS ---------------------------------------*/
+r.get('/banners', async (req, res) => {
+  try {
+    const snap = await db.collection('banners')
+                          .orderBy('order', 'asc') // Assuming you want to sort by the 'order' field
+                          .get();
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch banners' });
+  }
+});
+
+r.post('/banners', async (req, res) => {
+  try {
+    const ref = await db.collection('banners').add({
+      ...req.body,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.status(201).json({ id: ref.id });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to create banner', details: e.message });
+  }
+});
+
+r.put('/banners/:id', async (req, res) => {
+  try {
+    await db.collection('banners').doc(req.params.id).set(req.body, { merge: true });
+    res.json({ id: req.params.id });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update banner', details: e.message });
+  }
+});
+
+r.delete('/banners/:id', async (req, res) => {
+  try {
+    await db.collection('banners').doc(req.params.id).delete();
+    res.sendStatus(204);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete banner', details: e.message });
+  }
+});
+
+r.get('/banners/:id', async (req, res) => {
+  try {
+    const doc = await db.collection('banners').doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Banner not found' });
+    res.json({ id: doc.id, ...doc.data() });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch banner', details: e.message });
+  }
+});
+/*---------- RESULTS --------------------------------------*/
+/*---------- RESULTS (with Server-Side Pagination & Search) ----------------*/
+r.get('/results', async (req, res) => {
+  try {
+    const { limit = '10', startAfterId, searchQuery } = req.query;
+    const pageLimit = parseInt(limit, 10);
+
+    let q = db.collection('results');
+    
+    // --- SMART SEARCH LOGIC ---
+    if (searchQuery) {
+      // Regular expression to check if the query string contains only numbers
+      const isNumeric = /^\d+$/.test(searchQuery);
+
+      if (isNumeric) {
+        // --- SEARCH BY DOCUMENT ID (STARTS WITH) ---
+        // If the query is a number, search for Document IDs that start with it.
+        // This does NOT require a custom Firestore index.
+        q = q.where(admin.firestore.FieldPath.documentId(), '>=', searchQuery)
+             .where(admin.firestore.FieldPath.documentId(), '<=', searchQuery + '\uf8ff')
+             .orderBy(admin.firestore.FieldPath.documentId());
+      } else {
+        // --- SEARCH BY NAME (STARTS WITH, CASE-INSENSITIVE) ---
+        // If the query contains letters, search the 'name_lowercase' field.
+        // This REQUIRES the composite index you created earlier.
+        const searchQueryLower = searchQuery.toLowerCase();
+        q = q.where('name_lowercase', '>=', searchQueryLower)
+             .where('name_lowercase', '<=', searchQueryLower + '\uf8ff')
+             .orderBy('name_lowercase')
+             .orderBy('createdAt', 'desc');
+      }
+    } else {
+      // DEFAULT (NO SEARCH): Sort by the document ID.
+      q = q.orderBy(admin.firestore.FieldPath.documentId(), 'desc');
+    }
+
+    // --- PAGINATION LOGIC (remains the same) ---
+    if (startAfterId) {
+      const startDoc = await db.collection('results').doc(startAfterId).get();
+      if (!startDoc.exists) {
+        return res.status(404).json({ error: 'Pagination start document not found' });
+      }
+      q = q.startAfter(startDoc);
+    }
+    
+    const snap = await q.limit(pageLimit).get();
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const lastVisibleId = snap.size ? snap.docs[snap.size - 1].id : null;
+    
+    const payload = {
+      results,
+      lastVisible: lastVisibleId,
+      hasMore: snap.size === pageLimit
+    };
+
+    // --- COUNT LOGIC (must match the search logic) ---
+    if (!startAfterId) {
+      let countQuery = db.collection('results');
+      if (searchQuery) {
+        const isNumeric = /^\d+$/.test(searchQuery);
+        if (isNumeric) {
+          countQuery = countQuery.where(admin.firestore.FieldPath.documentId(), '>=', searchQuery)
+                                 .where(admin.firestore.FieldPath.documentId(), '<=', searchQuery + '\uf8ff');
+        } else {
+          const searchQueryLower = searchQuery.toLowerCase();
+          countQuery = countQuery.where('name_lowercase', '>=', searchQueryLower)
+                                 .where('name_lowercase', '<=', searchQueryLower + '\uf8ff');
+        }
+      }
+      const countSnap = await countQuery.count().get();
+      payload.totalResults = countSnap.data().count;
+    }
+
+    res.json(payload);
+
+  } catch (e) {
+    console.error('GET /results error', e);
+    res.status(500).json({ error: 'Failed to fetch results', details: e.message, code: e.code });
+  }
+});
+// This PUT route now correctly adds the 'name_lowercase' field on every save.
+r.put('/results/:id', async (req, res) => {
+  console.log('PUT /results/' + req.params.id, req.body);
+  try {
+    const docRef = db.collection('results').doc(req.params.id);
+    const docSnap = await docRef.get();
+
+    const payload = {
+      ...req.body,
+      // Automatically create/update the lowercase field for searching
+      name_lowercase: req.body.Name ? req.body.Name.toLowerCase() : '',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp() 
+    };
+
+    if (!docSnap.exists) {
+      payload.createdAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+    
+    await docRef.set(payload, { merge: true });
+    res.json({ id: req.params.id, status: 'ok' });
+  } catch (e) {
+    console.error('PUT error', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+r.get('/results/:id', async (req, res) => {
+  try {
+    const doc = await db.collection('results').doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Not found' });
+    res.json(doc.data());
+  } catch (e) {
+    console.error('GET /results/:id error', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 /*---------- Misc ------------------------------------------*/
 r.get('/ping',(_req,res)=>res.send('pong'));
 

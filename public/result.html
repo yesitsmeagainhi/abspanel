@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Results Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+  <nav class="bg-white shadow sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <span class="text-xl font-bold text-indigo-600">Dashboard</span>
+        <div class="space-x-2 sm:space-x-4 text-sm font-medium">
+          <a href="/"          class="text-indigo-600">Home</a>
+          <a href="lectures.html"  class="hover:text-indigo-600 transition">Lectures</a>
+          <a href="students.html"  class="hover:text-indigo-600 transition">Students</a>
+          <a href="announcements.html" class="hover:text-indigo-600 transition">Announcements</a>
+          <a href="banners.html" class="hover:text-indigo-600 transition">Banners</a>
+          <a href="result.html" class="hover:text-indigo-600 transition">Result</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+<body class="bg-light p-4">
+    
+  <div class="container">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h2>Results</h2>
+      <div class="d-flex ms-auto gap-2">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search by Name...">
+        <button id="searchBtn" class="btn btn-info">Search</button>
+      </div>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#formModal" onclick="openModal()">
+        Add New
+      </button>
+    </div>
+
+    <div class="my-3">
+      <label class="form-label">Bulk Upload (Excel / CSV)</label>
+      <input type="file" id="bulkFile" accept=".xlsx,.csv" class="form-control w-auto">
+      <button id="bulkBtn" class="btn btn-outline-primary mt-2" disabled>Upload</button>
+      <small id="bulkStatus" class="text-muted ms-2"></small>
+    </div>
+    
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Contact</th>
+            <th>Name</th>
+            <th>Branch</th>
+            <th>Batch</th>
+            <th>Marks</th>
+            <th width="160">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="6" class="text-center">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <div id="resultsCount"></div>
+        <nav>
+          <ul class="pagination justify-content-center" id="paginationControls"></ul>
+        </nav>
+    </div>
+    
+    <div class="modal fade" id="formModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <form id="recordForm">
+            <div class="modal-header">
+              <h5 class="modal-title">Result Record</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Contact (Doc ID)</label>
+                <input type="text" class="form-control" id="docId" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-control" id="Name" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Branch</label>
+                <input type="text" class="form-control" id="Branch">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Batch</label>
+                <input type="text" class="form-control" id="Batch">
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-bold">Marks</label>
+                <div class="row g-2" id="marksInputs"></div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" class="btn btn-success">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <script>
+    const API = '/api/results';
+    const tbody = document.getElementById('tbody');
+    const form = document.getElementById('recordForm');
+    const modal = new bootstrap.Modal('#formModal');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const paginationControls = document.getElementById('paginationControls');
+    const resultsCount = document.getElementById('resultsCount');
+
+    const subjects = ['Pharmaceutics', 'PharmaChemistry', 'HAP', 'SocialPharmacy', 'Pharmacognosy'];
+    const rowsPerPage = 10;
+
+    // --- State Management for Server-Side Pagination ---
+    let isLoading = false;
+    let currentSearchQuery = '';
+    let currentPage = 1;
+    let totalResults = 0;
+    // Store the 'startAfterId' for each page to allow going backward.
+    // pageHistory[1] is the start of page 2, pageHistory[2] is the start of page 3, etc.
+    let pageHistory = { 1: null }; 
+
+    /* ---------- Render Table and Pagination Controls ---------- */
+    function renderTable(results) {
+      if (!results.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center">No results found.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = results.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${r.Name || ''}</td>
+          <td>${r.Branch || ''}</td>
+          <td>${r.Batch || ''}</td>
+          <td><pre class="mb-0 small">${JSON.stringify(r.marks || {}, null, 2)}</pre></td>
+          <td>
+            <button class="btn btn-sm btn-warning" onclick="openModal('${r.id}')">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="del('${r.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderPagination() {
+      const totalPages = Math.ceil(totalResults / rowsPerPage);
+      paginationControls.innerHTML = '';
+      if (totalPages <= 1) {
+        resultsCount.textContent = `Showing ${totalResults} of ${totalResults} results`;
+        return;
+      }
+
+      // Previous Button
+      paginationControls.innerHTML += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a></li>`;
+
+      // Page Number Buttons (simplified for brevity)
+      for (let i = 1; i <= totalPages; i++) {
+        paginationControls.innerHTML += `<li class="page-item ${i === currentPage ? 'active' : ''}"><a class="page-link" href="#" onclick="changePage(${i})">${i}</a></li>`;
+      }
+
+      // Next Button
+      paginationControls.innerHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a></li>`;
+    
+      const start = (currentPage - 1) * rowsPerPage + 1;
+      const end = Math.min(start + rowsPerPage - 1, totalResults);
+      resultsCount.textContent = `Showing ${start}-${end} of ${totalResults} results`;
+    }
+
+   /* ---------- Fetch data from API (The Core Function) ---------- */
+    async function fetchResults(page = 1) {
+      if (isLoading) return;
+      isLoading = true;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center">Loading...</td></tr>`;
+
+      const startAfterId = pageHistory[page] || null;
+      let url = `${API}?limit=${rowsPerPage}`;
+      if (currentSearchQuery) url += `&searchQuery=${encodeURIComponent(currentSearchQuery)}`;
+      if (startAfterId) url += `&startAfterId=${startAfterId}`;
+
+      try {
+        // Step 1: Fetch the resource
+        const response = await fetch(url);
+
+        // Step 2: Check if the request was successful (status 200-299)
+        if (!response.ok) {
+          // If not, create an error object with the server's status text
+          throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+        }
+        
+        // Step 3: Now that we know it's OK, parse the JSON
+        const data = await response.json();
+
+        if (data.totalResults !== undefined) {
+          totalResults = data.totalResults;
+        }
+        
+        if (data.hasMore) {
+          pageHistory[page + 1] = data.lastVisible;
+        }
+
+        currentPage = page;
+        renderTable(data.results);
+        renderPagination();
+
+      } catch (error) {
+        // This 'catch' block will now catch both network errors and server errors
+        console.error('Failed to fetch data:', error);
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading data. See console for details.</td></tr>`;
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    function changePage(page) {
+      const totalPages = Math.ceil(totalResults / rowsPerPage);
+      if (page < 1 || page > totalPages) return;
+      fetchResults(page);
+    }
+    
+    // --- Event Listeners ---
+    searchBtn.addEventListener('click', () => {
+        currentSearchQuery = searchInput.value.trim();
+        // Reset pagination state for a new search
+        pageHistory = { 1: null };
+        totalResults = 0;
+        fetchResults(1);
+    });
+    searchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') searchBtn.click();
+    });
+
+    /* ---------- Modal & Form Handling ---------- */
+    async function openModal(id = null) {
+      form.reset();
+      document.getElementById('docId').disabled = !!id;
+      const container = document.getElementById('marksInputs');
+
+      if (id) {
+        // EDIT mode: fetch the single record from the API
+        const r = await fetch(`${API}/${id}`).then(res => res.json());
+        if (!r) { console.error('Record not found'); return; }
+
+        document.getElementById('docId').value = id;
+        document.getElementById('Name').value = r.Name || '';
+        document.getElementById('Branch').value = r.Branch || '';
+        document.getElementById('Batch').value = r.Batch || '';
+        
+        container.innerHTML = subjects.map(s => `<div class="col-md-4"><label class="form-label">${s}</label><input type="number" class="form-control marks" data-sub="${s}" value="${r.marks?.[s] ?? 0}"></div>`).join('');
+      } else {
+        // ADD mode: blank form
+        container.innerHTML = subjects.map(s => `<div class="col-md-4"><label class="form-label">${s}</label><input type="number" class="form-control marks" data-sub="${s}" value="0"></div>`).join('');
+      }
+      modal.show();
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const id = document.getElementById('docId').value.trim();
+      if (!id) return alert('Contact (Doc ID) cannot be empty.');
+
+      const payload = {
+        Name: document.getElementById('Name').value,
+        Branch: document.getElementById('Branch').value,
+        Batch: document.getElementById('Batch').value,
+        marks: Array.from(document.querySelectorAll('.marks')).reduce((acc, inp) => {
+          acc[inp.dataset.sub] = Number(inp.value) || 0;
+          return acc;
+        }, {})
+      };
+
+      await fetch(`${API}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      modal.hide();
+      fetchResults(currentPage); // Refresh the current page
+    });
+
+    /* ---------- Delete ---------- */
+    async function del(id) {
+      if (!confirm('Delete this record?')) return;
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      // If it was the last item on a page, go to the previous page
+      if (tbody.rows.length === 1 && currentPage > 1) {
+        currentPage--;
+      }
+      fetchResults(currentPage);
+    }
+    
+    // --- Initial Load ---
+    fetchResults(1);
+  </script>
+
+  <script>
+    // This bulk upload script remains largely the same, but we update the final call.
+    const bulkFile = document.getElementById('bulkFile');
+    const bulkBtn = document.getElementById('bulkBtn');
+    const bulkStat = document.getElementById('bulkStatus');
+
+    bulkFile.addEventListener('change', () => bulkBtn.disabled = !bulkFile.files.length);
+    bulkBtn.addEventListener('click', async () => {
+      const file = bulkFile.files[0];
+      if (!file) return;
+      bulkBtn.disabled = true;
+      bulkStat.textContent = 'Reading…';
+
+      try {
+        const ext = file.name.split('.').pop().toLowerCase();
+        let rows = [];
+        if (ext === 'csv') {
+          const text = await file.text();
+          rows = text.trim().split(/\r?\n/).map(r => r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/));
+        } else {
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        }
+
+        if (rows.length < 2) throw new Error('File is empty or has no data rows.');
+
+        const hdr = rows[0].map(h => String(h).trim());
+        const idx = key => hdr.indexOf(key);
+        const subjectIndices = {};
+        subjects.forEach(s => {
+          const subjectIndex = idx(s);
+          if (subjectIndex !== -1) subjectIndices[s] = subjectIndex;
+        });
+        
+        bulkStat.textContent = 'Uploading 0%...';
+        
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i];
+          const contact = String(r[idx('STUDENT Contact')] || '').trim();
+          if (!contact) continue;
+
+          const payload = {
+            Name: String(r[idx('Name')] || ''),
+            Branch: String(r[idx('Branch')] || ''),
+            Batch: String(r[idx('Batch')] || ''),
+            marks: {}
+          };
+
+          for (const sub in subjectIndices) {
+            payload.marks[sub] = Number(r[subjectIndices[sub]] || 0);
+          }
+          
+          await fetch(`${API}/${contact}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          const progress = Math.round((i / (rows.length - 1)) * 100);
+          bulkStat.textContent = `Uploading ${progress}%...`;
+        }
+
+        bulkStat.textContent = `Uploaded ${rows.length - 1} record(s). Refreshing...`;
+      } catch (error) {
+        console.error('Bulk upload failed:', error);
+        bulkStat.textContent = `Error: ${error.message}`;
+      } finally {
+        bulkBtn.disabled = false;
+        bulkFile.value = '';
+        // Reset to the first page to see new/updated results
+        currentSearchQuery = ''; 
+        searchInput.value = '';
+        pageHistory = { 1: null };
+        fetchResults(1);
+      }
+    });
+  </script>
+</body>
+</html>
