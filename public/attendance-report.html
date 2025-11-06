@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Report</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #f4f7f6; color: #333; }
+        .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, .1); }
+        h1 { color: #2c3e50; text-align: center; }
+        .filters { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .filters label { font-weight: bold; }
+        .filters select, .filters input, .filters button { padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+        .filters button { background: #3498db; color: #fff; border: none; cursor: pointer; transition: .3s; }
+        .filters button:hover { background: #2980b9; }
+        #loader { text-align: center; padding: 20px; font-size: 18px; display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #ecf0f1; color: #2c3e50; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .photo-link { color: #3498db; text-decoration: none; }
+        .photo-link:hover { text-decoration: underline; }
+        .no-data { color: #95a5a6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Attendance Report 📋</h1>
+        <div class="filters">
+            <div><label for="branch-select">Branch:</label><select id="branch-select"><option value="">Loading...</option></select></div>
+            <div><label for="batch-select">Batch:</label><select id="batch-select"><option value="">Loading...</option></select></div>
+            <div><label for="date-picker">Date:</label><input type="date" id="date-picker"></div>
+            <button id="generate-report-btn">Generate Report</button>
+        </div>
+        <div id="loader">Loading report...</div>
+        <table id="report-table">
+            <thead>
+                <tr><th>Student Name</th><th>In Time</th><th>Out Time</th><th>Duration (Min)</th><th>In Photo</th><th>Out Photo</th></tr>
+            </thead>
+            <tbody id="report-body"></tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        // IMPORTANT: Added 'doc' and 'getDoc' to the import for the new filter logic
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD884mfzzEhPY5icP_hbd8ninH35djZcf8",
+            authDomain: "crm-notifi-ca869.firebaseapp.com",
+            projectId: "crm-notifi-ca869",
+            storageBucket: "crm-notifi-ca869.appspot.com",
+            messagingSenderId: "478139440162",
+            appId: "1:478139440162:web:c2fe376d543659b168be7b",
+            measurementId: "G-R5S63HRY2Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const branchSelect = document.getElementById('branch-select');
+        const batchSelect  = document.getElementById('batch-select');
+        const datePicker   = document.getElementById('date-picker');
+        const generateBtn  = document.getElementById('generate-report-btn');
+        const reportBody   = document.getElementById('report-body');
+        const loader       = document.getElementById('loader');
+
+        // --- NEW EFFICIENT FILTER FUNCTION ---
+        // This function now reads from a single document to prevent errors and improve speed.
+        async function populateFilters() {
+            try {
+                const configRef = doc(db, "config", "appData"); // Reads 'appData' doc from 'config' collection
+                const docSnap = await getDoc(configRef);
+
+                if (docSnap.exists()) {
+                    const configData = docSnap.data();
+                    const branches = configData.branches || [];
+                    const batches = configData.batches || [];
+
+                    branchSelect.innerHTML = '<option value="">Select a Branch</option>';
+                    branches.sort().forEach(b => {
+                        const o = document.createElement('option'); o.value = b; o.textContent = b; branchSelect.appendChild(o);
+                    });
+
+                    batchSelect.innerHTML = '<option value="">Select a Batch</option>';
+                    batches.sort().forEach(b => {
+                        const o = document.createElement('option'); o.value = b; o.textContent = b; batchSelect.appendChild(o);
+                    });
+                } else {
+                    console.error("Config document ('config/appData') not found!");
+                    branchSelect.innerHTML = batchSelect.innerHTML = '<option value="">Setup needed</option>';
+                }
+            } catch (e) {
+                console.error("Error loading filters:", e);
+                branchSelect.innerHTML = batchSelect.innerHTML = '<option value="">Error loading</option>';
+            }
+        }
+
+        const safeToDate = ts => {
+            if (!ts) return null;
+            return ts.toDate ? ts.toDate() : ts;
+        };
+
+        // --- FINAL MERGED REPORT GENERATION FUNCTION ---
+       async function generateReport() {
+    const branch = branchSelect.value;
+    const batch  = batchSelect.value;
+    const date   = datePicker.value;
+    if (!branch || !batch || !date) {
+        alert("Please select branch, batch and date.");
+        return;
+    }
+
+    loader.style.display = 'block';
+    reportBody.innerHTML = '';
+    console.clear();
+    console.log("🔍 branch:", branch, "batch:", batch, "date:", date);
+
+    const q = query(collection(db, "studentattendance"),
+                    where("meta.branch", "==", branch),
+                    where("meta.batch",  "==", batch));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+        reportBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align:center;">No students found for this branch and batch.</td></tr>';
+        loader.style.display = 'none';
+        return;
+    }
+
+    let html = '';
+    snap.forEach(doc => {
+        const data = doc.data();
+
+        // --- CORRECTED LOGIC FOR FLAT DATA ---
+
+        // 1. Access the student's name using the flat key 'meta.name'
+        const studentName = data['meta.name'] || 'Unknown';
+        
+        // 2. Build the prefix for the day's data keys
+        const dateKeyPrefix = `days.${date}`;
+
+        // 3. Check for presence using a reliable field like 'hasIn'
+        if (!data[`${dateKeyPrefix}.hasIn`]) {
+            html += `<tr><td>${studentName}</td><td colspan="5" class="no-data" style="text-align:center;">Absent</td></tr>`;
+            return;
+        }
+
+        // 4. Access all day-specific data using the constructed flat keys
+        const inAt      = data[`${dateKeyPrefix}.inAt`];
+        const outAt     = data[`${dateKeyPrefix}.outAt`];
+        const inAtMs    = data[`${dateKeyPrefix}.inAtMs`];
+        const outAtMs   = data[`${dateKeyPrefix}.outAtMs`];
+        const inPhotoUrl  = data[`${dateKeyPrefix}.inPhoto`];
+        const outPhotoUrl = data[`${dateKeyPrefix}.outPhoto`];
+
+        // 5. Format the data for the table
+        const inTime  = safeToDate(inAt)?.toLocaleTimeString()  ?? '—';
+        const outTime = safeToDate(outAt)?.toLocaleTimeString() ?? '—';
+        let duration  = '—';
+        if (inAtMs && outAtMs) {
+            duration = Math.round((outAtMs - inAtMs) / 60000);
+        }
+        const inPhoto  = inPhotoUrl  ? `<a href="${inPhotoUrl}"  target="_blank" class="photo-link">View</a>` : '—';
+        const outPhoto = outPhotoUrl ? `<a href="${outPhotoUrl}" target="_blank" class="photo-link">View</a>` : '—';
+
+        html += `
+            <tr>
+                <td>${studentName}</td>
+                <td>${inTime}</td>
+                <td>${outTime}</td>
+                <td>${duration}</td>
+                <td>${inPhoto}</td>
+                <td>${outPhoto}</td>
+            </tr>`;
+    });
+
+    reportBody.innerHTML = html || '<tr><td colspan="6" class="no-data" style="text-align:center;">No attendance data for this date.</td></tr>';
+    loader.style.display = 'none';
+}
+        generateBtn.addEventListener('click', generateReport);
+        document.addEventListener('DOMContentLoaded', () => {
+            datePicker.value = new Date().toISOString().split('T')[0];
+            populateFilters();
+        });
+    </script>
+</body>
+</html>

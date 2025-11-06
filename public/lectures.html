@@ -762,6 +762,7 @@ yearSel.onchange = ()=>{
 /* ──────────────────────────────────────────────────────────
    Utility helpers
    ────────────────────────────────────────────────────────── */
+   const norm = (v) => (v || '').trim().toLowerCase(); // <-- ADD THIS LINE
 const todayISO = () => new Date().toISOString().split('T')[0];
 const tomorrowISO = () => {
   const tomorrow = new Date();
@@ -1376,47 +1377,66 @@ window.editLecture = async id=>{
   submitBtn.textContent = 'Update';
   form.scrollIntoView({behavior:'smooth'});
 };
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  
+  // Get the form data as a standard object
+  const formData = Object.fromEntries(new FormData(form));
 
-form.addEventListener('submit',async e=>{
-  e.preventDefault();
-  const body = JSON.stringify(Object.fromEntries(new FormData(form)));
-  const url  = editId ? `/api/lectures/${editId}` : '/api/lectures';
-  const res  = await fetch(url,{method: editId?'PUT':'POST',
-                                headers:{'Content-Type':'application/json'}, body});
-  if(!res.ok) return alert('Save failed');
+  // Create the new data object with _search fields
+  const lectureData = {
+    ...formData,
+    branch_search: norm(formData.branch),
+    course_search: norm(formData.course),
+    batch_search: norm(formData.batch),
+    year_search: norm(formData.year),
+    faculty_search: norm(formData.faculty),
+  };
+  
+  // Stringify the new object (with _search fields)
+  const body = JSON.stringify(lectureData);
+  const url = editId ? `/api/lectures/${editId}` : '/api/lectures';
 
-  resetForm(); 
-  loadLectures(currentPage); // Reload current page after save
+  const res = await fetch(url, {
+    method: editId ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body
+  });
+  
+  if (!res.ok) return alert('Save failed');
+
+  resetForm();
+  loadLectures(currentPage); // Reload current page after save
 });
 
 function resetForm(){
-  form.reset(); editId=null;
-  formTitle.textContent='Add Lecture'; submitBtn.textContent='Save';
-  reset(batchSel ,'Select Batch');
-  reset(yearSel  ,'Select Year/Semester');
-  reset(subjectSel,'Select Subject');
-  
-  // Reset holiday checkbox and restore required fields
-  holidayCheckbox.checked = false;
-  startInput.setAttribute('required', '');
-  endInput.setAttribute('required', '');
-  modeSelect.setAttribute('required', '');
+  form.reset(); editId=null;
+  formTitle.textContent='Add Lecture'; submitBtn.textContent='Save';
+  reset(batchSel ,'Select Batch');
+  reset(yearSel  ,'Select Year/Semester');
+  reset(subjectSel,'Select Subject');
+  
+  // Reset holiday checkbox and restore required fields
+  holidayCheckbox.checked = false;
+  startInput.setAttribute('required', '');
+  endInput.setAttribute('required', '');
+  modeSelect.setAttribute('required', '');
 }
 cancelBtn.onclick = resetForm;
 
 /* ──────────────────────────────────────────────────────────
-   Filter handling - reset to page 1 when filters change
-   ────────────────────────────────────────────────────────── */
+   Filter handling - reset to page 1 when filters change
+   ────────────────────────────────────────────────────────── */
 [courseFilter, branchFilter, facultyFilter, modeFilter].forEach(sel=>{
-  sel.onchange = () => loadLectures(1); // Reset to page 1 when filter changes
+  sel.onchange = () => loadLectures(1); // Reset to page 1 when filter changes
 });
 
 clearFiltersBtn.onclick = clearAllFilters;
 downloadBtn.onclick = downloadCSV;
 
 /* ──────────────────────────────────────────────────────────
-   Kick-off
-   ────────────────────────────────────────────────────────── */
+   Kick-off
+   ────────────────────────────────────────────────────────── */
 loadLectures(1);
 </script>
 

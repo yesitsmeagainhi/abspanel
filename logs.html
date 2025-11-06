@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Report Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+    <style>
+        :root { --pico-font-size: 100%; }
+        body { padding: 1.5rem; }
+        main.container { max-width: 1400px; }
+        .grid { grid-template-columns: 1fr 1fr; }
+        .full-width { grid-column: 1 / -1; }
+        .checkbox-filters { display: flex; gap: 2rem; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .preview-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-block: 1.5rem; padding: 1rem; border: 1px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); }
+        .preview-info p { margin: 0; }
+        thead { position: sticky; top: 0; }
+        .absent { color: var(--pico-color-red-500, #e74c3c); }
+        .holiday { color: var(--pico-color-amber-500, #f39c12); font-weight: bold; }
+        .no-data-row td { text-align: center; padding: 2rem; }
+        .photo-link { text-decoration: none; }
+        #theme-switcher { position: absolute; top: 1.5rem; right: 1.5rem; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a href="#" id="theme-switcher" data-tooltip="Toggle Theme" aria-label="Toggle Theme">◐</a>
+        <header style="text-align: center;">
+            <h1>Attendance Report 📄</h1>
+            <p>Generate and download detailed student attendance records with holidays.</p>
+        </header>
+        <article>
+            <div class="grid">
+                <div><label for="from-date-picker">From Date</label><input type="date" id="from-date-picker"></div>
+                <div><label for="to-date-picker">To Date</label><input type="date" id="to-date-picker"></div>
+                <div><label for="branch-select">Filter by Branch</label><select id="branch-select"><option value="">All Branches</option></select></div>
+                <div><label for="batch-select">Filter by Batch</label><select id="batch-select"><option value="">All Batches</option></select></div>
+                <div class="full-width">
+                    <label for="student-search">Search by Student Name or Number</label>
+                    <input type="search" id="student-search" placeholder="Leave empty to use branch/batch filters">
+                </div>
+            </div>
+            <div class="grid full-width">
+                <button id="preview-btn" class="secondary">👁️ Preview Data</button>
+                <button id="download-btn">⬇️ Download CSV</button>
+            </div>
+        </article>
+        <div id="loader" aria-busy="true" style="display: none; text-align: center; margin-top: 2rem;">Fetching data...</div>
+        <section id="preview-section" style="display: none;">
+            <hr>
+            <h2>Data Preview</h2>
+            <div class="preview-info">
+                <p><strong>Total Records:</strong> <span id="record-count">0</span></p>
+                <p><strong>Students Found:</strong> <span id="student-count">0</span></p>
+                <p><strong>Present Days:</strong> <span id="present-days-count" style="color: var(--pico-color-green-500, #27ae60); font-weight: bold;">0</span></p>
+                <p><strong>Absent Days:</strong> <span id="absent-days-count" style="color: var(--pico-color-red-500, #e74c3c); font-weight: bold;">0</span></p>
+                <p><strong>Holidays:</strong> <span id="holiday-days-count" style="color: var(--pico-color-amber-500, #f39c12); font-weight: bold;">0</span></p>
+                <p><strong>Date Range:</strong> <span id="date-range">-</span></p>
+                <p><strong>Filter Used:</strong> <span id="filter-info">-</span></p>
+            </div>
+            <div class="checkbox-filters full-width">
+                <label><input type="checkbox" id="present-filter-cb" role="switch"> Show Present Only</label>
+                <label><input type="checkbox" id="absent-filter-cb" role="switch"> Show Absent Only</label>
+                <label><input type="checkbox" id="holiday-filter-cb" role="switch"> Show Holidays Only</label>
+            </div>
+            <figure>
+                <div role="group">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student No</th> <th>Name</th> <th>Branch</th> <th>Batch</th> <th>Date</th> <th>In Time</th> <th>Out Time</th> <th>Duration (Min)</th> <th>In Photo</th> <th>Out Photo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preview-tbody"></tbody>
+                    </table>
+                </div>
+            </figure>
+        </section>
+    </main>
+
+    <script type="module">
+        // --- Firebase Imports & Config ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        const firebaseConfig = { apiKey: "AIzaSyD884mfzzEhPY5icP_hbd8ninH35djZcf8", authDomain: "crm-notifi-ca869.firebaseapp.com", projectId: "crm-notifi-ca869", storageBucket: "crm-notifi-ca869.appspot.com", messagingSenderId: "478139440162", appId: "1:478139440162:web:c2fe376d543659b168be7b", measurementId: "G-R5S63HRY2Z" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- DOM Element References ---
+        const fromDatePicker = document.getElementById('from-date-picker');
+        const toDatePicker = document.getElementById('to-date-picker');
+        const branchSelect = document.getElementById('branch-select');
+        const batchSelect = document.getElementById('batch-select');
+        const studentSearch = document.getElementById('student-search');
+        const presentFilterCb = document.getElementById('present-filter-cb');
+        const absentFilterCb = document.getElementById('absent-filter-cb');
+        const holidayFilterCb = document.getElementById('holiday-filter-cb');
+        const previewBtn = document.getElementById('preview-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const loader = document.getElementById('loader');
+        const previewSection = document.getElementById('preview-section');
+        const previewTbody = document.getElementById('preview-tbody');
+        const themeSwitcher = document.getElementById('theme-switcher');
+        let cachedReportData = [];
+
+        // --- Core Functions ---
+        async function populateFilters() { 
+            try { 
+                const configRef = doc(db, "config", "appData"); 
+                const docSnap = await getDoc(configRef); 
+                if (docSnap.exists()) { 
+                    const { branches = [], batches = [] } = docSnap.data(); 
+                    branchSelect.innerHTML = '<option value="">All Branches</option>' + branches.sort().map(b => `<option value="${b}">${b}</option>`).join(''); 
+                    batchSelect.innerHTML = '<option value="">All Batches</option>' + batches.sort().map(b => `<option value="${b}">${b}</option>`).join(''); 
+                } 
+            } catch (e) { 
+                console.error("Error loading filters:", e); 
+            } 
+        }
+
+        function exportToCSV(data, filename) { 
+            if (!data || data.length === 0) { 
+                alert("No data to export."); 
+                return; 
+            } 
+            const headers = Object.keys(data[0]); 
+            const csvRows = [headers.join(',')]; 
+            for (const row of data) { 
+                const values = headers.map(header => `"${('' + row[header]).replace(/"/g, '""')}"`); 
+                csvRows.push(values.join(',')); 
+            } 
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' }); 
+            const link = document.createElement('a'); 
+            link.href = URL.createObjectURL(blob); 
+            link.download = filename; 
+            document.body.appendChild(link); 
+            link.click(); 
+            document.body.removeChild(link); 
+        }
+
+        async function fetchHolidays(fromDateStr, toDateStr, branch, batch) {
+            try {
+                const dateStrings = [];
+                const start = new Date(fromDateStr);
+                const end = new Date(toDateStr);
+                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                    dateStrings.push(d.toISOString().split('T')[0]);
+                }
+
+                let q = collection(db, "lectures");
+                const conditions = [where("mode", "==", "No Lecture")];
+                
+                if (branch) {
+                    conditions.push(where("branch", "==", branch));
+                }
+                if (batch) {
+                    conditions.push(where("batch", "==", batch));
+                }
+                
+                if (conditions.length > 0) {
+                    q = query(q, ...conditions);
+                }
+
+                const snapshot = await getDocs(q);
+                const holidays = {};
+                
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    const holidayDate = data.date;
+                    
+                    if (dateStrings.includes(holidayDate)) {
+                        if (!holidays[holidayDate]) {
+                            holidays[holidayDate] = [];
+                        }
+                        holidays[holidayDate].push({
+                            subject: data.subject || 'Holiday',
+                            branch: data.branch,
+                            batch: data.batch
+                        });
+                    }
+                });
+
+                return holidays;
+            } catch (error) {
+                console.error("Error fetching holidays:", error);
+                return {};
+            }
+        }
+
+        async function fetchReportData() { 
+            const fromDateStr = fromDatePicker.value; 
+            const toDateStr = toDatePicker.value; 
+            const branch = branchSelect.value; 
+            const batch = batchSelect.value; 
+            const searchTerm = studentSearch.value.trim().toLowerCase(); 
+            
+            if (!fromDateStr || !toDateStr) { 
+                alert("Please select a valid date range."); 
+                return null; 
+            } 
+            if (fromDateStr > toDateStr) { 
+                alert("'From' date cannot be after 'To' date."); 
+                return null; 
+            } 
+            
+            loader.style.display = 'block'; 
+            previewSection.style.display = 'none'; 
+            const reportData = []; 
+            const dateStrings = []; 
+            const start = new Date(fromDateStr); 
+            const end = new Date(toDateStr); 
+            
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) { 
+                dateStrings.push(d.toISOString().split('T')[0]); 
+            } 
+            
+            try { 
+                // Fetch holidays
+                const holidays = await fetchHolidays(fromDateStr, toDateStr, branch, batch);
+
+                let q = collection(db, "studentattendance"); 
+                const conditions = []; 
+                if (branch) { 
+                    conditions.push(where("meta.branch", "==", branch)); 
+                } 
+                if (batch) { 
+                    conditions.push(where("meta.batch", "==", batch)); 
+                } 
+                if (conditions.length > 0) { 
+                    q = query(q, ...conditions); 
+                } 
+                const snapshot = await getDocs(q); 
+                let studentDocs = snapshot.docs; 
+                
+                if (searchTerm) { 
+                    studentDocs = studentDocs.filter(doc => { 
+                        const name = (doc.data().name || '').toLowerCase(); 
+                        const id = doc.id.toLowerCase(); 
+                        return name.includes(searchTerm) || id.includes(searchTerm); 
+                    }); 
+                } 
+                
+                studentDocs.forEach(docSnapshot => { 
+                    const studentId = docSnapshot.id; 
+                    const studentData = docSnapshot.data(); 
+                    const studentName = studentData.name || 'Unknown'; 
+                    const studentBranch = studentData.meta?.branch || 'N/A'; 
+                    const studentBatch = studentData.meta?.batch || 'N/A'; 
+                    
+                    dateStrings.forEach(currentDateStr => { 
+                        // Check if this date is a holiday for this student's branch/batch
+                        const isHoliday = holidays[currentDateStr] && holidays[currentDateStr].some(h => 
+                            (!branch || h.branch === studentBranch) && 
+                            (!batch || h.batch === studentBatch)
+                        );
+
+                        let row;
+                        if (isHoliday) {
+                            const holidayInfo = holidays[currentDateStr].find(h => 
+                                (!branch || h.branch === studentBranch) && 
+                                (!batch || h.batch === studentBatch)
+                            );
+                            row = {
+                                "Student No": studentId,
+                                "Name": studentName,
+                                "Branch": studentBranch,
+                                "Batch": studentBatch,
+                                "Date": currentDateStr,
+                                "In Time": "Holiday",
+                                "Out Time": "Holiday",
+                                "Duration (Min)": holidayInfo?.subject || "Holiday",
+                                "In Photo URL": "Holiday",
+                                "Out Photo URL": "Holiday"
+                            };
+                        } else {
+                            const dateKeyPrefix = `days.${currentDateStr}`;
+                            
+                            if (studentData[`${dateKeyPrefix}.hasIn`]) { 
+                                const inAt = studentData[`${dateKeyPrefix}.inAt`]; 
+                                const outAt = studentData[`${dateKeyPrefix}.outAt`]; 
+                                const duration = studentData[`${dateKeyPrefix}.durationMin`] ?? '—'; 
+                                const inPhoto = studentData[`${dateKeyPrefix}.inPhoto`] || 'N/A'; 
+                                const outPhoto = studentData[`${dateKeyPrefix}.outPhoto`] || 'N/A'; 
+                                row = { 
+                                    "Student No": studentId, 
+                                    "Name": studentName, 
+                                    "Branch": studentBranch, 
+                                    "Batch": studentBatch, 
+                                    "Date": currentDateStr, 
+                                    "In Time": inAt?.toDate?.().toLocaleTimeString() || '—', 
+                                    "Out Time": outAt?.toDate?.().toLocaleTimeString() || '—', 
+                                    "Duration (Min)": duration, 
+                                    "In Photo URL": inPhoto, 
+                                    "Out Photo URL": outPhoto 
+                                }; 
+                            } else { 
+                                row = { 
+                                    "Student No": studentId, 
+                                    "Name": studentName, 
+                                    "Branch": studentBranch, 
+                                    "Batch": studentBatch, 
+                                    "Date": currentDateStr, 
+                                    "In Time": "Absent", 
+                                    "Out Time": "Absent", 
+                                    "Duration (Min)": "Absent", 
+                                    "In Photo URL": "Absent", 
+                                    "Out Photo URL": "Absent" 
+                                }; 
+                            } 
+                        }
+                        reportData.push(row); 
+                    }); 
+                }); 
+            } catch (error) { 
+                console.error("Error fetching report data:", error); 
+                alert("An error occurred. Check the console for details."); 
+                return null; 
+            } finally { 
+                loader.style.display = 'none'; 
+            } 
+            return reportData; 
+        }
+
+        function displayPreview(data, fromDate, toDate, filterInfo) {
+            previewTbody.innerHTML = '';
+            document.getElementById('filter-info').textContent = filterInfo;
+            document.getElementById('date-range').textContent = `${fromDate} to ${toDate}`;
+
+            if (!data || data.length === 0) {
+                document.getElementById('record-count').textContent = 0;
+                document.getElementById('student-count').textContent = 0;
+                document.getElementById('present-days-count').textContent = 0;
+                document.getElementById('absent-days-count').textContent = 0;
+                document.getElementById('holiday-days-count').textContent = 0;
+                previewTbody.innerHTML = `<tr class="no-data-row"><td colspan="10">No attendance records found.</td></tr>`;
+            } else {
+                let presentCount = 0, absentCount = 0, holidayCount = 0;
+                data.forEach(row => {
+                    if (row["In Time"] === "Holiday") holidayCount++;
+                    else if (row["In Time"] === "Absent") absentCount++;
+                    else presentCount++;
+                });
+                
+                document.getElementById('record-count').textContent = data.length;
+                document.getElementById('student-count').textContent = new Set(data.map(r => r["Student No"])).size;
+                document.getElementById('present-days-count').textContent = presentCount;
+                document.getElementById('absent-days-count').textContent = absentCount;
+                document.getElementById('holiday-days-count').textContent = holidayCount;
+                
+                const showPresentOnly = presentFilterCb.checked;
+                const showAbsentOnly = absentFilterCb.checked;
+                const showHolidayOnly = holidayFilterCb.checked;
+                let dataToDisplay = data;
+
+                if (showPresentOnly) dataToDisplay = data.filter(row => row["In Time"] !== "Absent" && row["In Time"] !== "Holiday");
+                else if (showAbsentOnly) dataToDisplay = data.filter(row => row["In Time"] === "Absent");
+                else if (showHolidayOnly) dataToDisplay = data.filter(row => row["In Time"] === "Holiday");
+                
+                if(dataToDisplay.length === 0) {
+                     previewTbody.innerHTML = `<tr class="no-data-row"><td colspan="10">No matching records for this filter.</td></tr>`;
+                } else {
+                    dataToDisplay.forEach(row => {
+                        const isAbsent = row["In Time"] === "Absent";
+                        const isHoliday = row["In Time"] === "Holiday";
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${row["Student No"]}</td><td>${row.Name}</td><td>${row.Branch}</td><td>${row.Batch}</td><td>${row.Date}</td><td class="${isAbsent ? 'absent' : isHoliday ? 'holiday' : ''}">${row["In Time"]}</td><td class="${isAbsent ? 'absent' : isHoliday ? 'holiday' : ''}">${row["Out Time"]}</td><td class="${isAbsent ? 'absent' : isHoliday ? 'holiday' : ''}">${row["Duration (Min)"]}</td><td>${!isAbsent && !isHoliday && row["In Photo URL"] !== 'N/A' ? `<a href="${row["In Photo URL"]}" target="_blank" class="photo-link">View</a>` : `<span class="${isAbsent ? 'absent' : isHoliday ? 'holiday' : ''}">${row["In Photo URL"]}</span>`}</td><td>${!isAbsent && !isHoliday && row["Out Photo URL"] !== 'N/A' ? `<a href="${row["Out Photo URL"]}" target="_blank" class="photo-link">View</a>` : `<span class="${isAbsent ? 'absent' : isHoliday ? 'holiday' : ''}">${row["Out Photo URL"]}</span>`}</td>`;
+                        previewTbody.appendChild(tr);
+                    });
+                }
+            }
+            previewSection.style.display = 'block';
+        }
+
+        async function handlePreview() {
+            presentFilterCb.checked = false;
+            absentFilterCb.checked = false;
+            holidayFilterCb.checked = false;
+            const data = await fetchReportData();
+            if (data !== null) {
+                cachedReportData = data;
+                let filterText = 'All Students & Filters';
+                if (studentSearch.value) filterText = `Search: "${studentSearch.value}"`;
+                else if (branchSelect.value || batchSelect.value) filterText = `Branch: ${branchSelect.value || 'All'}, Batch: ${batchSelect.value || 'All'}`;
+                displayPreview(data, fromDatePicker.value, toDatePicker.value, filterText);
+            }
+        }
+        
+        async function handleDownload() {
+            if (cachedReportData.length === 0) {
+                alert("Please preview data first before downloading.");
+                return;
+            }
+            
+            const showPresentOnly = presentFilterCb.checked;
+            const showAbsentOnly = absentFilterCb.checked;
+            const showHolidayOnly = holidayFilterCb.checked;
+            let dataToExport = cachedReportData;
+
+            if (showPresentOnly) {
+                dataToExport = cachedReportData.filter(row => row["In Time"] !== "Absent" && row["In Time"] !== "Holiday");
+            } else if (showAbsentOnly) {
+                dataToExport = cachedReportData.filter(row => row["In Time"] === "Absent");
+            } else if (showHolidayOnly) {
+                dataToExport = cachedReportData.filter(row => row["In Time"] === "Holiday");
+            }
+
+            if(dataToExport.length === 0) {
+                alert("There are no visible records to download based on the current filter.");
+                return;
+            }
+
+            const from = fromDatePicker.value;
+            const to = toDatePicker.value;
+            const filename = `Attendance_Report_${from}_to_${to}.csv`;
+            exportToCSV(dataToExport, filename);
+        }
+
+        // --- Event Listeners ---
+        previewBtn.addEventListener('click', handlePreview);
+        downloadBtn.addEventListener('click', handleDownload);
+
+        const reDisplay = () => displayPreview(cachedReportData, fromDatePicker.value, toDatePicker.value, document.getElementById('filter-info').textContent);
+        
+        presentFilterCb.addEventListener('change', () => {
+            if (presentFilterCb.checked) {
+                absentFilterCb.checked = false;
+                holidayFilterCb.checked = false;
+            }
+            reDisplay();
+        });
+        absentFilterCb.addEventListener('change', () => {
+            if (absentFilterCb.checked) {
+                presentFilterCb.checked = false;
+                holidayFilterCb.checked = false;
+            }
+            reDisplay();
+        });
+        holidayFilterCb.addEventListener('change', () => {
+            if (holidayFilterCb.checked) {
+                presentFilterCb.checked = false;
+                absentFilterCb.checked = false;
+            }
+            reDisplay();
+        });
+
+        [fromDatePicker, toDatePicker, branchSelect, batchSelect, studentSearch].forEach(el => {
+            el.addEventListener('input', () => {
+                cachedReportData = [];
+                previewSection.style.display = 'none';
+            });
+        });
+        
+        themeSwitcher.addEventListener('click', (e) => {
+            e.preventDefault();
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme') || 'light';
+            html.setAttribute('data-theme', currentTheme === 'light' ? 'dark' : 'light');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            fromDatePicker.value = today;
+            toDatePicker.value = today;
+            populateFilters();
+        });
+    </script>
+</body>
+</html>
