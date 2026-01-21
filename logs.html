@@ -463,6 +463,54 @@
             toDatePicker.value = today;
             populateFilters();
         });
+
+        // --- DEMO DATA FUNCTION ---
+    async function addDemoAttendance(studentId, dateStr) {
+        console.log(`Attempting to add demo data for ${studentId}...`);
+        const studentRef = doc(db, "studentattendance", studentId);
+        
+        // Setup Timestamps (10 AM to 4 PM)
+        const dateObj = new Date(dateStr);
+        const inTime = new Date(dateObj); inTime.setHours(10, 0, 0);
+        const outTime = new Date(dateObj); outTime.setHours(16, 0, 0);
+        
+        const inTimestamp = Timestamp.fromDate(inTime);
+        const outTimestamp = Timestamp.fromDate(outTime);
+
+        const mockLoc = { acc: 20, branchKey: "bhayandar", distM: 15, lat: 19.418677, lng: 72.8190058 };
+
+        try {
+            await updateDoc(studentRef, {
+                [`days.${dateStr}`]: {
+                    hasIn: true, hasOut: true,
+                    inAt: inTimestamp, outAt: outTimestamp,
+                    inAtMs: inTime.getTime(), outAtMs: outTime.getTime(),
+                    durationMin: 360,
+                    inLoc: mockLoc, outLoc: mockLoc,
+                    inPhoto: "https://placehold.co/400x600?text=In+Photo",
+                    outPhoto: "https://placehold.co/400x600?text=Out+Photo"
+                },
+                logs: arrayUnion(
+                    { type: "IN", at: inTimestamp, dateKey: dateStr, loc: mockLoc },
+                    { type: "OUT", at: outTimestamp, dateKey: dateStr, loc: mockLoc }
+                ),
+                "meta.summary.lastAction": "OUT",
+                "meta.summary.lastActionAt": outTimestamp
+            });
+            alert(`✅ Success! Added demo data for ${studentId} on ${dateStr}`);
+            // Refresh the preview if the dates match
+            if(document.getElementById('from-date-picker').value === dateStr) {
+                document.getElementById('preview-btn').click();
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error: " + error.message);
+        }
+    }
+
+    // --- RUN IT ---
+    // Uncomment the line below to run it when the page loads
+    addDemoAttendance("8108456098", "2025-12-04");
     </script>
 </body>
 </html>

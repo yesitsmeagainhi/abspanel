@@ -20,8 +20,8 @@
           <a href="students.html"  class="hover:text-indigo-600 transition">Students</a>
           <a href="announcements.html" class="hover:text-indigo-600 transition">Announcements</a>
           <a href="banners.html" class="text-indigo-600">Banners</a>
-                    <a href="result.html" class="hover:text-indigo-600 transition">Result</a>
-
+          <a href="result.html" class="hover:text-indigo-600 transition">Result</a>
+          <a href="faculty.html" class="hover:text-indigo-600 transition">Faculty</a>
         </div>
       </div>
     </div>
@@ -166,9 +166,12 @@
     async function load() {
       // Try to fetch from API, fallback to local storage, then sample data
       try {
-        const data = await fetch('/api/banners').then(r => r.json());
-        banners = data;
+        const response = await fetch('/api/banners?limit=100');
+        if (!response.ok) throw new Error('Failed to fetch banners');
+        const data = await response.json();
+        banners = data.banners || [];
       } catch (error) {
+        console.error('Error loading banners:', error);
         // Fallback to local storage if API is not available
         const stored = localStorage.getItem('banners');
         if (stored) {
@@ -207,11 +210,14 @@
         : `<tr><td colspan="6" class="text-center py-8 text-slate-500">No banners found. Add one above!</td></tr>`;
     }
 
-    async function editBan(id) {
+    window.editBan = async function(id) {
       let banner;
       try {
-        banner = await fetch(`/api/banners/${id}`).then(r => r.json());
+        const response = await fetch(`/api/banners/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch banner');
+        banner = await response.json();
       } catch (error) {
+        console.error('Error loading banner:', error);
         // Fallback to local data
         banner = banners.find(b => b.id === id);
       }
@@ -229,17 +235,19 @@
       }
     }
 
-    async function deleteBan(id) {
+    window.deleteBan = async function(id) {
       if (!confirm('Delete banner?')) return;
-      
+
       try {
-        await fetch(`/api/banners/${id}`, { method: 'DELETE' });
+        const response = await fetch(`/api/banners/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete banner');
       } catch (error) {
+        console.error('Error deleting banner:', error);
         // Fallback to local storage
         banners = banners.filter(b => b.id !== id);
         localStorage.setItem('banners', JSON.stringify(banners));
       }
-      
+
       load();
     }
 

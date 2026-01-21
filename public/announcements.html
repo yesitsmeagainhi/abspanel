@@ -20,8 +20,8 @@
           <a href="students.html"  class="hover:text-indigo-600 transition">Students</a>
           <a href="announcements.html" class="text-indigo-600">Announcements</a>
           <a href="banners.html" class="hover:text-indigo-600 transition">Banners</a>
-                    <a href="result.html" class="hover:text-indigo-600 transition">Result</a>
-
+          <a href="result.html" class="hover:text-indigo-600 transition">Result</a>
+          <a href="faculty.html" class="hover:text-indigo-600 transition">Faculty</a>
         </div>
       </div>
     </div>
@@ -172,9 +172,12 @@
     async function load() {
       // Try to fetch from API, fallback to local storage, then sample data
       try {
-        const data = await fetch('/api/announcements').then(r => r.json());
-        announcements = data;
+        const response = await fetch('/api/announcements?limit=100');
+        if (!response.ok) throw new Error('Failed to fetch announcements');
+        const data = await response.json();
+        announcements = data.announcements || [];
       } catch (error) {
+        console.error('Error loading announcements:', error);
         // Fallback to local storage if API is not available
         const stored = localStorage.getItem('announcements');
         if (stored) {
@@ -213,17 +216,20 @@
         : `<tr><td colspan="10" class="text-center py-8 text-slate-500">No announcements found. Add one above!</td></tr>`;
     }
 
-    async function editAnn(id) {
+    window.editAnn = async function(id) {
       let announcement;
       try {
-        announcement = await fetch(`/api/announcements/${id}`).then(r => r.json());
+        const response = await fetch(`/api/announcements/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch announcement');
+        announcement = await response.json();
       } catch (error) {
+        console.error('Error loading announcement:', error);
         // Fallback to local data
         announcement = announcements.find(a => a.id === id);
       }
-      
+
       if (announcement) {
-        Object.keys(announcement).forEach(k => { if (form[k]) form[k].value = announcement[k]; });
+        Object.keys(announcement).forEach(k => { if (form[k]) form[k].value = announcement[k] || ''; });
         editId = id;
         formTitle.textContent = 'Edit Announcement';
         submitBtn.textContent = 'Update';
@@ -231,17 +237,19 @@
       }
     }
 
-    async function deleteAnn(id) {
+    window.deleteAnn = async function(id) {
       if (!confirm('Delete announcement?')) return;
-      
+
       try {
-        await fetch(`/api/announcements/${id}`, { method: 'DELETE' });
+        const response = await fetch(`/api/announcements/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete announcement');
       } catch (error) {
+        console.error('Error deleting announcement:', error);
         // Fallback to local storage
         announcements = announcements.filter(a => a.id !== id);
         localStorage.setItem('announcements', JSON.stringify(announcements));
       }
-      
+
       load();
     }
 

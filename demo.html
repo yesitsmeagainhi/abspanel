@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Demo Attendance</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+    <style>
+        body { padding: 2rem; }
+        main.container { max-width: 800px; }
+        .result { margin-top: 2rem; padding: 1rem; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header style="text-align: center;">
+            <h1>Add Demo Attendance Data 🎯</h1>
+            <p>Add test attendance records with photo fields for student 8108456098</p>
+        </header>
+
+        <article>
+            <div>
+                <label for="student-number">Student Number</label>
+                <input type="text" id="student-number" value="7208392825" readonly>
+            </div>
+
+            <div>
+                <label for="student-name">Student Name</label>
+                <input type="text" id="student-name" value="Test Student" placeholder="Enter student name">
+            </div>
+
+            <div>
+                <label for="branch">Branch</label>
+                <input type="text" id="branch" value="Nalasopara" placeholder="Enter branch">
+            </div>
+
+            <div>
+                <label for="batch">Batch</label>
+                <input type="text" id="batch" value="E- Batch D.Pharm" placeholder="Enter batch">
+            </div>
+
+            <div>
+                <label for="course">Course</label>
+                <input type="text" id="course" value="D.Pharm" placeholder="Enter course">
+            </div>
+
+            <div>
+                <label for="demo-date">Demo Attendance Date</label>
+                <input type="date" id="demo-date">
+            </div>
+
+            <div>
+                <label for="num-days">Number of Demo Days</label>
+                <input type="number" id="num-days" value="3" min="1" max="10">
+            </div>
+
+            <button id="add-demo-btn">➕ Add Demo Attendance</button>
+            <button id="check-existing-btn" class="secondary">🔍 Check Existing Data</button>
+        </article>
+
+        <div id="result"></div>
+    </main>
+
+    <script type="module">
+        // Firebase Imports & Config
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, Timestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD884mfzzEhPY5icP_hbd8ninH35djZcf8",
+            authDomain: "crm-notifi-ca869.firebaseapp.com",
+            projectId: "crm-notifi-ca869",
+            storageBucket: "crm-notifi-ca869.appspot.com",
+            messagingSenderId: "478139440162",
+            appId: "1:478139440162:web:c2fe376d543659b168be7b",
+            measurementId: "G-R5S63HRY2Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const studentNumberInput = document.getElementById('student-number');
+        const studentNameInput = document.getElementById('student-name');
+        const branchInput = document.getElementById('branch');
+        const batchInput = document.getElementById('batch');
+        const courseInput = document.getElementById('course');
+        const demoDateInput = document.getElementById('demo-date');
+        const numDaysInput = document.getElementById('num-days');
+        const addDemoBtn = document.getElementById('add-demo-btn');
+        const checkExistingBtn = document.getElementById('check-existing-btn');
+        const resultDiv = document.getElementById('result');
+
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        demoDateInput.value = today;
+
+        function showResult(message, isSuccess = true, data = null) {
+            resultDiv.className = `result ${isSuccess ? 'success' : 'error'}`;
+            let html = `<p><strong>${message}</strong></p>`;
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            resultDiv.innerHTML = html;
+        }
+
+        function generateDemoPhotoUrl(studentNo, type, timestamp) {
+            // Generate a demo photo URL similar to your Firebase storage structure
+            return `https://firebasestorage.googleapis.com/v0/b/crm-notifi-ca869.firebasestorage.app/o/selfies%2F${studentNo}%2F${timestamp}.jpg?alt=media&token=demo-${type}-${Date.now()}`;
+        }
+
+        async function checkExistingData() {
+            try {
+                const studentNo = studentNumberInput.value.trim();
+                if (!studentNo) {
+                    showResult('Please enter a student number', false);
+                    return;
+                }
+
+                const docRef = doc(db, "studentattendance", studentNo);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    showResult('✅ Student record found!', true, docSnap.data());
+                } else {
+                    showResult('❌ No existing record found for this student', false);
+                }
+            } catch (error) {
+                showResult(`Error checking data: ${error.message}`, false);
+                console.error(error);
+            }
+        }
+
+        async function addDemoAttendance() {
+            try {
+                const studentNo = studentNumberInput.value.trim();
+                const studentName = studentNameInput.value.trim();
+                const branch = branchInput.value.trim();
+                const batch = batchInput.value.trim();
+                const course = courseInput.value.trim();
+                const startDate = new Date(demoDateInput.value);
+                const numDays = parseInt(numDaysInput.value);
+
+                if (!studentNo || !studentName || !branch || !batch || !course) {
+                    showResult('Please fill in all fields', false);
+                    return;
+                }
+
+                addDemoBtn.setAttribute('aria-busy', 'true');
+                addDemoBtn.disabled = true;
+
+                const docRef = doc(db, "studentattendance", studentNo);
+                
+                // Check if document already exists
+                const docSnap = await getDoc(docRef);
+                const existingData = docSnap.exists() ? docSnap.data() : {};
+
+                // Prepare the data structure
+                const daysData = {};
+                const logsData = existingData.logs || [];
+                let lastAction = "OUT";
+                let lastActionAt = null;
+
+                for (let i = 0; i < numDays; i++) {
+                    const currentDate = new Date(startDate);
+                    currentDate.setDate(startDate.getDate() + i);
+                    const dateKey = currentDate.toISOString().split('T')[0];
+
+                    // Create timestamps for in and out
+                    const inTime = new Date(currentDate);
+                    inTime.setHours(9, 0, 0, 0); // 9:00 AM
+                    const inTimestamp = Timestamp.fromDate(inTime);
+                    const inTimeMs = inTime.getTime();
+
+                    const outTime = new Date(currentDate);
+                    outTime.setHours(17, 0, 0, 0); // 5:00 PM
+                    const outTimestamp = Timestamp.fromDate(outTime);
+                    const outTimeMs = outTime.getTime();
+
+                    const durationMin = 480; // 8 hours in minutes
+
+                    // Generate demo photo URLs
+                    const inPhotoUrl = generateDemoPhotoUrl(studentNo, 'in', inTimeMs);
+                    const outPhotoUrl = generateDemoPhotoUrl(studentNo, 'out', outTimeMs);
+
+                    // Add to days object using flat structure
+                    daysData[`days.${dateKey}.hasIn`] = true;
+                    daysData[`days.${dateKey}.hasOut`] = true;
+                    daysData[`days.${dateKey}.inAt`] = inTimestamp;
+                    daysData[`days.${dateKey}.inAtMs`] = inTimeMs;
+                    daysData[`days.${dateKey}.outAt`] = outTimestamp;
+                    daysData[`days.${dateKey}.outAtMs`] = outTimeMs;
+                    daysData[`days.${dateKey}.durationMin`] = durationMin;
+                    daysData[`days.${dateKey}.inPhoto`] = inPhotoUrl;
+                    daysData[`days.${dateKey}.outPhoto`] = outPhotoUrl;
+                    daysData[`days.${dateKey}.inLoc`] = {
+                        acc: 20,
+                        branchKey: "bhayandar",
+                        distM: 21,
+                        lat: 19.418677,
+                        lng: 72.8190058
+                    };
+                    daysData[`days.${dateKey}.outLoc`] = {
+                        acc: 20,
+                        branchKey: "bhayandar",
+                        distM: 49,
+                        lat: 19.4192484,
+                        lng: 72.8188685
+                    };
+
+                    // Add to logs array
+                    logsData.push({
+                        at: inTimestamp,
+                        dateKey: dateKey,
+                        loc: {
+                            acc: 20,
+                            branchKey: "bhayandar",
+                            distM: 21,
+                            lat: 19.418677,
+                            lng: 72.8190058
+                        },
+                        type: "IN"
+                    });
+
+                    logsData.push({
+                        at: outTimestamp,
+                        dateKey: dateKey,
+                        loc: {
+                            acc: 20,
+                            branchKey: "bhayandar",
+                            distM: 49,
+                            lat: 19.4192484,
+                            lng: 72.8188685
+                        },
+                        type: "OUT"
+                    });
+
+                    lastAction = "OUT";
+                    lastActionAt = outTimestamp;
+                }
+
+                // Prepare the complete document data
+                const documentData = {
+                    ...daysData,
+                    logs: logsData,
+                    meta: {
+                        batch: batch,
+                        branch: branch,
+                        course: course,
+                        name: studentName
+                    },
+                    name: studentName,
+                    "summary.lastAction": lastAction,
+                    "summary.lastActionAt": lastActionAt,
+                    "summary.totalDays": numDays
+                };
+
+                // Use setDoc with merge to update or create
+                await setDoc(docRef, documentData, { merge: true });
+
+                showResult(`✅ Successfully added ${numDays} days of demo attendance for ${studentName} (${studentNo})!`, true, {
+                    message: "Demo data added successfully",
+                    studentNo: studentNo,
+                    daysAdded: numDays,
+                    startDate: demoDateInput.value,
+                    photosIncluded: true
+                });
+
+            } catch (error) {
+                showResult(`Error adding demo attendance: ${error.message}`, false);
+                console.error(error);
+            } finally {
+                addDemoBtn.removeAttribute('aria-busy');
+                addDemoBtn.disabled = false;
+            }
+        }
+
+        // Event Listeners
+        addDemoBtn.addEventListener('click', addDemoAttendance);
+        checkExistingBtn.addEventListener('click', checkExistingData);
+    </script>
+</body>
+</html>

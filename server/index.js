@@ -446,6 +446,87 @@ r.get('/results/:id', async (req, res) => {
   }
 });
 
+/*---------- FACULTY (CRUD for managing faculty list) -----------------*/
+r.get('/faculty', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit || '100', 10);
+    const startAfterId = req.query.startAfterId || null;
+
+    let q = db.collection('faculty').orderBy('name', 'asc');
+
+    if (startAfterId) {
+      const startDoc = await db.collection('faculty').doc(startAfterId).get();
+      if (startDoc.exists) {
+        q = q.startAfter(startDoc);
+      }
+    }
+
+    const snap = await q.limit(limit).get();
+    const faculty = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const lastVisibleId = snap.size ? snap.docs[snap.size - 1].id : null;
+
+    const payload = {
+      faculty,
+      lastVisible: lastVisibleId,
+      hasMore: snap.size === limit
+    };
+
+    if (!startAfterId) {
+      const cnt = await db.collection('faculty').count().get();
+      payload.totalFaculty = cnt.data().count;
+    }
+
+    res.json(payload);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch faculty', details: e.message });
+  }
+});
+
+r.post('/faculty', async (req, res) => {
+  try {
+    const d = await db.collection('faculty').add({
+      ...req.body,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    res.status(201).json({ id: d.id });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to create faculty', details: e.message });
+  }
+});
+
+r.put('/faculty/:id', async (req, res) => {
+  try {
+    await db.collection('faculty').doc(req.params.id).set(req.body, { merge: true });
+    res.json({ id: req.params.id });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to update faculty', details: e.message });
+  }
+});
+
+r.delete('/faculty/:id', async (req, res) => {
+  try {
+    await db.collection('faculty').doc(req.params.id).delete();
+    res.sendStatus(204);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to delete faculty', details: e.message });
+  }
+});
+
+r.get('/faculty/:id', async (req, res) => {
+  try {
+    const d = await db.collection('faculty').doc(req.params.id).get();
+    if (!d.exists) return res.status(404).json({ error: 'Faculty not found' });
+    res.json(d.data());
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch faculty', details: e.message });
+  }
+});
+
 /*---------- Misc ------------------------------------------*/
 r.get('/ping', (_req, res) => res.send('pong'));
 

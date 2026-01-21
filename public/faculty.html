@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Faculty Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+    <nav class="bg-white shadow sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <span class="text-xl font-bold text-indigo-600">Dashboard</span>
+                <div class="space-x-2 sm:space-x-4 text-sm font-medium">
+                    <a href="/" class="hover:text-indigo-600 transition">Home</a>
+                    <a href="lectures.html" class="hover:text-indigo-600 transition">Lectures</a>
+                    <a href="students.html" class="hover:text-indigo-600 transition">Students</a>
+                    <a href="announcements.html" class="hover:text-indigo-600 transition">Announcements</a>
+                    <a href="banners.html" class="hover:text-indigo-600 transition">Banners</a>
+                    <a href="result.html" class="hover:text-indigo-600 transition">Result</a>
+                    <a href="faculty.html" class="text-indigo-600">Faculty</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Form Section -->
+        <section id="formSection" class="bg-white rounded-xl shadow p-6 mb-8">
+            <h2 id="formTitle" class="text-xl font-semibold mb-4">Add Faculty</h2>
+
+            <form id="form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input name="name" placeholder="Faculty Name *" required
+                       class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+                <input name="email" type="email" placeholder="Email (optional)"
+                       class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+                <input name="phone" type="tel" placeholder="Phone (optional)"
+                       class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+
+                <select name="department" class="border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">Select Department (optional)</option>
+                    <option value="Pharmacy">Pharmacy</option>
+                    <option value="Nursing">Nursing</option>
+                    <option value="General">General</option>
+                    <option value="Administration">Administration</option>
+                </select>
+
+                <div class="sm:col-span-2">
+                    <input name="specialization" placeholder="Specialization/Subject (optional)"
+                           class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+
+                <div class="sm:col-span-2 flex gap-2">
+                    <button type="submit" id="submitBtn"
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition">
+                        Save
+                    </button>
+                    <button type="button" id="cancelBtn"
+                            class="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- List Section -->
+        <section class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold">Faculty List</h3>
+                    <span id="facultyCount" class="text-sm text-gray-600"></span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider">
+                        <tr>
+                            <th class="px-4 py-3">Name</th>
+                            <th class="px-4 py-3">Email</th>
+                            <th class="px-4 py-3">Phone</th>
+                            <th class="px-4 py-3">Department</th>
+                            <th class="px-4 py-3">Specialization</th>
+                            <th class="px-4 py-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100" id="listBody">
+                        <tr>
+                            <td colspan="6" class="py-8 text-center text-slate-500">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+<script>
+/* ──────────────────────────────────────────────────────────
+   DOM references
+   ────────────────────────────────────────────────────────── */
+const form = document.getElementById('form');
+const formTitle = document.getElementById('formTitle');
+const submitBtn = document.getElementById('submitBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const tbody = document.getElementById('listBody');
+const facultyCount = document.getElementById('facultyCount');
+
+/* ──────────────────────────────────────────────────────────
+   Local state
+   ────────────────────────────────────────────────────────── */
+let editId = null;
+let faculty = [];
+
+/* ──────────────────────────────────────────────────────────
+   Data loader
+   ────────────────────────────────────────────────────────── */
+async function loadFaculty() {
+  try {
+    const response = await fetch('/api/faculty?limit=100');
+    if (!response.ok) throw new Error('Failed to fetch faculty');
+
+    const data = await response.json();
+    faculty = data.faculty || [];
+
+    // Update count
+    facultyCount.textContent = `${faculty.length} faculty member${faculty.length !== 1 ? 's' : ''}`;
+
+    render();
+  } catch (error) {
+    console.error('Error loading faculty:', error);
+    tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-red-500">Error loading faculty. Please try again.</td></tr>`;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
+   Rendering
+   ────────────────────────────────────────────────────────── */
+function render() {
+  if (faculty.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">No faculty members found. Add one above.</td></tr>`;
+    return;
+  }
+
+  const html = faculty.map(f => `
+    <tr class="hover:bg-slate-50">
+      <td class="px-4 py-3 font-medium">${f.name || ''}</td>
+      <td class="px-4 py-3">${f.email || '-'}</td>
+      <td class="px-4 py-3">${f.phone || '-'}</td>
+      <td class="px-4 py-3">
+        ${f.department ? `<span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">${f.department}</span>` : '-'}
+      </td>
+      <td class="px-4 py-3">${f.specialization || '-'}</td>
+      <td class="px-4 py-3">
+        <button onclick="editFaculty('${f.id}')"
+                class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 mr-1">
+          Edit
+        </button>
+        <button onclick="deleteFaculty('${f.id}')"
+                class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+          Delete
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.innerHTML = html;
+}
+
+/* ──────────────────────────────────────────────────────────
+   CRUD operations
+   ────────────────────────────────────────────────────────── */
+window.deleteFaculty = async (id) => {
+  if (!confirm('Delete this faculty member? This action cannot be undone.')) return;
+
+  try {
+    const response = await fetch(`/api/faculty/${id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Failed to delete faculty');
+
+    loadFaculty();
+  } catch (error) {
+    console.error('Error deleting faculty:', error);
+    alert('Failed to delete faculty member. Please try again.');
+  }
+};
+
+window.editFaculty = async (id) => {
+  try {
+    const response = await fetch(`/api/faculty/${id}`);
+    if (!response.ok) throw new Error('Faculty not found');
+
+    const facultyMember = await response.json();
+
+    // Populate form
+    form.name.value = facultyMember.name || '';
+    form.email.value = facultyMember.email || '';
+    form.phone.value = facultyMember.phone || '';
+    form.department.value = facultyMember.department || '';
+    form.specialization.value = facultyMember.specialization || '';
+
+    editId = id;
+    formTitle.textContent = 'Edit Faculty';
+    submitBtn.textContent = 'Update';
+    form.scrollIntoView({ behavior: 'smooth' });
+  } catch (error) {
+    console.error('Error loading faculty for edit:', error);
+    alert('Failed to load faculty details. Please try again.');
+  }
+};
+
+/* ──────────────────────────────────────────────────────────
+   Form submission
+   ────────────────────────────────────────────────────────── */
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const formData = Object.fromEntries(new FormData(form));
+  const url = editId ? `/api/faculty/${editId}` : '/api/faculty';
+
+  try {
+    const response = await fetch(url, {
+      method: editId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+
+    if (!response.ok) throw new Error('Failed to save faculty');
+
+    resetForm();
+    loadFaculty();
+  } catch (error) {
+    console.error('Error saving faculty:', error);
+    alert('Failed to save faculty member. Please try again.');
+  }
+});
+
+/* ──────────────────────────────────────────────────────────
+   Form reset
+   ────────────────────────────────────────────────────────── */
+function resetForm() {
+  form.reset();
+  editId = null;
+  formTitle.textContent = 'Add Faculty';
+  submitBtn.textContent = 'Save';
+}
+
+cancelBtn.onclick = resetForm;
+
+/* ──────────────────────────────────────────────────────────
+   Initialize
+   ────────────────────────────────────────────────────────── */
+loadFaculty();
+</script>
+
+</body>
+</html>

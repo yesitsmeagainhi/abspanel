@@ -132,27 +132,47 @@
     snap.forEach(doc => {
         const data = doc.data();
 
-        // --- CORRECTED LOGIC FOR FLAT DATA ---
-
-        // 1. Access the student's name using the flat key 'meta.name'
-        const studentName = data['meta.name'] || 'Unknown';
+        // --- HYBRID DATA ACCESS STRATEGY ---
+        // Handles documents that may have mixed nested Maps and flattened dotted-keys.
         
-        // 2. Build the prefix for the day's data keys
-        const dateKeyPrefix = `days.${date}`;
+        // 1. Student Name Strategy: Check Root Name -> Nested Meta -> Flat Meta Key
+        const meta = data.meta || {};
+        const studentName = data.name || meta.name || data['meta.name'] || 'Unknown';
+        
+        // 2. Data Retrieval Helper
+        // Checks (A) Flat Key: "days.2025-12-10.prop" 
+        // Checks (B) Nested Path: data.days["2025-12-10"].prop
+        const getVal = (prop) => {
+            const flatKey = `days.${date}.${prop}`;
+            if (data[flatKey] !== undefined) return data[flatKey];
+            
+            if (data.days && data.days[date]) {
+                return data.days[date][prop];
+            }
+            return undefined;
+        };
 
-        // 3. Check for presence using a reliable field like 'hasIn'
-        if (!data[`${dateKeyPrefix}.hasIn`]) {
+        // 3. Check Attendance Presence
+        // We check 'hasIn' to determine presence.
+        const hasIn = getVal('hasIn');
+
+        if (!hasIn) {
             html += `<tr><td>${studentName}</td><td colspan="5" class="no-data" style="text-align:center;">Absent</td></tr>`;
             return;
         }
 
-        // 4. Access all day-specific data using the constructed flat keys
-        const inAt      = data[`${dateKeyPrefix}.inAt`];
-        const outAt     = data[`${dateKeyPrefix}.outAt`];
-        const inAtMs    = data[`${dateKeyPrefix}.inAtMs`];
-        const outAtMs   = data[`${dateKeyPrefix}.outAtMs`];
-        const inPhotoUrl  = data[`${dateKeyPrefix}.inPhoto`];
-        const outPhotoUrl = data[`${dateKeyPrefix}.outPhoto`];
+        // 4. Retrieve Data Fields
+        const inAt      = getVal('inAt');
+        const outAt     = getVal('outAt');
+        const inAtMs    = getVal('inAtMs');
+        const outAtMs   = getVal('outAtMs');
+        const inPhotoUrl  = getVal('inPhoto');
+        const outPhotoUrl = getVal('outPhoto');
+
+        // Debugging Log for first item found (to help diagnosis)
+        if (html === '') {
+             console.log("Debug First Match:", { studentName, hasIn, inAt, fields: Object.keys(data) });
+        }
 
         // 5. Format the data for the table
         const inTime  = safeToDate(inAt)?.toLocaleTimeString()  ?? '—';
