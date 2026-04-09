@@ -196,7 +196,6 @@
                 if (docSnap.exists()) {
                     const configData = docSnap.data();
                     const branches = configData.branches || [];
-                    const batches  = configData.batches  || [];
 
                     branchSelect.innerHTML = '<option value="">Select Branch</option>';
                     branches.sort().forEach(b => {
@@ -205,17 +204,7 @@
                         branchSelect.appendChild(o);
                     });
 
-                    let html = '<div class="select-all-row"><label><input type="checkbox" id="select-all-batches"> <strong>Select All</strong></label></div>';
-                    batches.sort().forEach(b => {
-                        html += `<label><input type="checkbox" value="${b}"> ${b}</label>`;
-                    });
-                    batchList.innerHTML = html;
-
-                    document.getElementById('select-all-batches').addEventListener('change', (e) => {
-                        batchList.querySelectorAll('input[type="checkbox"]:not(#select-all-batches)').forEach(cb => {
-                            cb.checked = e.target.checked;
-                        });
-                    });
+                    batchList.innerHTML = '<div style="color:#999;font-size:13px;padding:4px;">Select a branch to see its batches</div>';
                 } else {
                     branchSelect.innerHTML = '<option value="">Setup needed</option>';
                     batchList.innerHTML = 'Setup needed';
@@ -224,6 +213,52 @@
                 console.error("Error loading filters:", e);
                 branchSelect.innerHTML = '<option value="">Error loading</option>';
                 batchList.innerHTML = 'Error loading filters';
+            }
+        }
+
+        // Load only the batches that actually exist for the selected branch
+        // by querying the live `students` collection (real-time filtering).
+        async function loadBatchesForBranch() {
+            const branch = branchSelect.value;
+            if (!branch) {
+                batchList.innerHTML = '<div style="color:#999;font-size:13px;padding:4px;">Select a branch to see its batches</div>';
+                return;
+            }
+            batchList.innerHTML = '<div style="color:#666;font-size:13px;padding:4px;">Loading batches for ' + branch + '...</div>';
+            try {
+                // Student docs use lowercase `branch`; try lowercase first, fall back to capitalised.
+                let snap = await getDocs(query(collection(db, "students"), where("branch", "==", branch)));
+                if (snap.empty) {
+                    snap = await getDocs(query(collection(db, "students"), where("Branch", "==", branch)));
+                }
+
+                const batchSet = new Set();
+                snap.forEach(d => {
+                    const data = d.data() || {};
+                    const b = data.batch || data.Batch;
+                    if (b) batchSet.add(b);
+                });
+
+                const batches = [...batchSet].sort();
+                if (batches.length === 0) {
+                    batchList.innerHTML = '<div style="color:#c0392b;font-size:13px;padding:4px;">No batches found for ' + branch + '</div>';
+                    return;
+                }
+
+                let html = '<div class="select-all-row"><label><input type="checkbox" id="select-all-batches"> <strong>Select All (' + batches.length + ')</strong></label></div>';
+                batches.forEach(b => {
+                    html += `<label><input type="checkbox" value="${b}"> ${b}</label>`;
+                });
+                batchList.innerHTML = html;
+
+                document.getElementById('select-all-batches').addEventListener('change', (e) => {
+                    batchList.querySelectorAll('input[type="checkbox"]:not(#select-all-batches)').forEach(cb => {
+                        cb.checked = e.target.checked;
+                    });
+                });
+            } catch (e) {
+                console.error("Error loading batches for branch:", e);
+                batchList.innerHTML = '<div style="color:red;font-size:13px;padding:4px;">Error loading batches</div>';
             }
         }
 
@@ -612,6 +647,7 @@
 
         // ─── EVENT LISTENERS ───
         generateBtn.addEventListener('click', generateReport);
+        branchSelect.addEventListener('change', loadBatchesForBranch);
         document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
         document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
         document.getElementById('export-pdf-photos-btn').addEventListener('click', exportPDFWithPhotos);
