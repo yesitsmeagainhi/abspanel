@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -59,6 +60,23 @@
     </style>
 </head>
 <body>
+    <nav class="bg-white shadow sticky top-0 z-20" style="margin:-20px -20px 20px -20px;">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <span class="text-xl font-bold text-indigo-600">Dashboard</span>
+                <div class="space-x-2 sm:space-x-4 text-sm font-medium">
+                    <a href="/" class="hover:text-indigo-600 transition">Home</a>
+                    <a href="lectures.html" class="hover:text-indigo-600 transition">Lectures</a>
+                    <a href="students.html" class="hover:text-indigo-600 transition">Students</a>
+                    <a href="announcements.html" class="hover:text-indigo-600 transition">Announcements</a>
+                    <a href="banners.html" class="hover:text-indigo-600 transition">Banners</a>
+                    <a href="result.html" class="hover:text-indigo-600 transition">Result</a>
+                    <a href="faculty.html" class="hover:text-indigo-600 transition">Faculty</a>
+                    <a href="attendance-report.html" class="text-indigo-600">Attendance</a>
+                </div>
+            </div>
+        </div>
+    </nav>
     <div class="container">
         <h1>Attendance Report</h1>
         <div class="filters">
