@@ -1,3 +1,33 @@
+# Environment & secrets
 .env
 .env.local
+.env.*
+
+# Deployment
 .vercel
+
+# WhatsApp session data (contains auth tokens)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Dependencies
+node_modules/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# QR code image (regenerated at runtime)
+whatsapp-qr.png
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
