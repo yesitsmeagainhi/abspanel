@@ -9,7 +9,7 @@
 <body class="bg-slate-50 text-slate-800 font-sans">
 
     <nav class="bg-white shadow sticky top-0 z-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <span class="text-xl font-bold text-indigo-600">Dashboard</span>
                 <div class="space-x-2 sm:space-x-4 text-sm font-medium">
@@ -246,8 +246,8 @@
                         </th>
                         <th class="px-4 py-3">Course</th><th class="px-4 py-3">Batch</th><th class="px-4 py-3">Branch</th>
                         <th class="px-4 py-3">Year</th><th class="px-4 py-3">Subject</th><th class="px-4 py-3">Faculty</th>
-                        <th class="px-4 py-3">Date</th><th class="px-4 py-3">Start</th><th class="px-4 py-3">End</th>
-                        <th class="px-4 py-3">Mode</th><th class="px-4 py-3">Link</th><th class="px-4 py-3">Location</th>
+                        <th class="px-4 py-3">Date</th><th class="px-4 py-3">Day</th><th class="px-4 py-3">Start</th><th class="px-4 py-3">End</th>
+                        <th class="px-4 py-3">Link</th><th class="px-4 py-3">Location</th>
                         <th class="px-4 py-3">Actions</th>
                     </tr>
                 </thead>
@@ -722,6 +722,18 @@ const tomorrowISO = () => {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   return tomorrow.toISOString().split('T')[0];
+};
+// Convert YYYY-MM-DD to DD-MM-YYYY for display
+const formatDateDMY = (d) => {
+  if (!d || d.length !== 10) return d || '';
+  const [y, m, day] = d.split('-');
+  return `${day}-${m}-${y}`;
+};
+// Get day name from YYYY-MM-DD
+const getDayName = (d) => {
+  if (!d || d.length !== 10) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return isNaN(dt) ? '' : dt.toLocaleDateString('en-IN', { weekday: 'long' });
 };
 
 const rowClass = d => {
@@ -1261,17 +1273,13 @@ function render(){
       <td class="px-4 py-3">${l.subject}</td>
       <td class="px-4 py-3">${l.faculty}</td>
       <td class="px-4 py-3">
-        <span class="font-medium">${l.date}</span>
+        <span class="font-medium">${formatDateDMY(l.date)}</span>
         ${l.date===today?'<span class="ml-1 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">Today</span>':''}
         ${l.date===tomorrow?'<span class="ml-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">Tomorrow</span>':''}
       </td>
+      <td class="px-4 py-3">${l.day || getDayName(l.date)}</td>
       <td class="px-4 py-3">${l.start}</td>
       <td class="px-4 py-3">${l.end}</td>
-      <td class="px-4 py-3">
-        <span class="px-2 py-0.5 rounded-full text-xs font-medium ${String(l.mode).toLowerCase()==='online'?'bg-blue-100 text-blue-800':'bg-purple-100 text-purple-800'}">
-          ${l.mode||'N/A'}
-        </span>
-      </td>
       <td class="px-4 py-3">${l.link?`<a href="${l.link}" target="_blank" class="text-indigo-600">🔗</a>`:''}</td>
       <td class="px-4 py-3">${l.location||''}</td>
       <td class="px-4 py-3">
@@ -1337,9 +1345,13 @@ form.addEventListener('submit', async e => {
   // Get the form data as a standard object
   const formData = Object.fromEntries(new FormData(form));
 
+  // Auto-compute day name from selected date
+  const dayName = formData.date ? getDayName(formData.date) : '';
+
   // Create the new data object with _search fields
   const lectureData = {
     ...formData,
+    day: dayName,
     branch_search: norm(formData.branch),
     course_search: norm(formData.course),
     batch_search: norm(formData.batch),

@@ -586,10 +586,20 @@ app.use('/', r);   // Vercel rewrites /api/foo → /foo internally
 /*──────── EXPORT (for Vercel & tests) ───────────────────────*/
 module.exports = app;
 
+/*──────── WhatsApp attendance notifications ────────────────*/
+const { initWhatsApp } = require('./whatsapp');
+const { startAttendanceListener } = require('./attendanceListener');
+
 /*──────── Local / Render bootstrap ─────────────────────────*/
 if (require.main === module) {
   const PORT = process.env.PORT || 4000;
-  app.listen(PORT, () =>
-   console.log(`✅  API ready  →  http://localhost:${PORT}/api/ping`)
-  );
+  app.listen(PORT, () => {
+    console.log(`✅  API ready  →  http://localhost:${PORT}/api/ping`);
+
+    // Start WhatsApp Web client (shows QR code in terminal on first run)
+    initWhatsApp();
+
+    // Start watching attendance changes in Firestore
+    startAttendanceListener(db);
+  });
 }
